@@ -1,0 +1,20 @@
+{
+  "appId": "com.kratosfit.app",
+  "appName": "Kratos",
+  "webDir": "www",
+  "backgroundColor": "#0E0F11",
+  "android": {
+    "backgroundColor": "#0E0F11"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_kratos",
+      "iconColor": "#C6F432"
+    },
+    "SystemBars": {
+      "style": "DARK",
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

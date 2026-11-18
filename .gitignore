@@ -1,0 +1,15 @@
+node_modules/
+www/
+*.apk
+
+# Llave de firma: nunca al repositorio (va como secreto en GitHub)
+keystore/
+*.p12
+*.jks
+*.keystore
+
+# Archivo original del artifact de Claude.ai (la versión de la app está en src/index.html)
+kratos.html
+
+.DS_Store
+Thumbs.db

@@ -1,0 +1,75 @@
+name: Compilar APK
+
+# Cada cambio en main compila el APK y lo publica en Releases.
+# Enlace fijo a la última versión:
+#   https://github.com/<usuario>/<repo>/releases/latest/download/Kratos.apk
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Construir la app web y copiarla a Android
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Preparar llave de firma
+        env:
+          KS: ${{ secrets.KRATOS_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS" ]; then
+            echo "::error::Falta el secreto KRATOS_KEYSTORE_BASE64 (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/kratos.p12"
+          echo "KRATOS_KEYSTORE_FILE=$RUNNER_TEMP/kratos.p12" >> "$GITHUB_ENV"
+
+      - name: Compilar APK firmado
+        working-directory: android
+        env:
+          KRATOS_KEYSTORE_PASSWORD: ${{ secrets.KRATOS_KEYSTORE_PASSWORD }}
+          KRATOS_KEY_ALIAS: kratos
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon \
+            -PversionCode=${{ github.run_number }} \
+            -PversionName=1.0.${{ github.run_number }}
+          cp app/build/outputs/apk/release/app-release.apk ../Kratos.apk
+          "$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME"/build-tools | sort -V | tail -1)/apksigner verify --print-certs ../Kratos.apk | head -3
+
+      - name: Publicar en Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v1.0.${{ github.run_number }}"
+          gh release create "$TAG" Kratos.apk \
+            --title "Kratos 1.0.${{ github.run_number }}" \
+            --notes "APK compilado automáticamente desde ${GITHUB_SHA::7}. Descarga **Kratos.apk** e instálalo en tu Android." \
+            --latest

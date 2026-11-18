@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kratos</string>
+    <string name="title_activity_main">Kratos</string>
+    <string name="package_name">com.kratosfit.app</string>
+    <string name="custom_url_scheme">com.kratosfit.app</string>
+</resources>
