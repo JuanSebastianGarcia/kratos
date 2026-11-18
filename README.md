@@ -1,6 +1,6 @@
 # Kratos
 
-App de entrenamiento para Android (Capacitor). Tema oscuro, acento `#C6F432`.
+App de entrenamiento para Android (Capacitor). Tema oscuro, acento naranja `#FF6A1A`. Incluye biseries (dos ejercicios seguidos sin descanso).
 
 ## Descargar
 
@@ -17,7 +17,8 @@ En el celular: abre el enlace, descarga `Kratos.apk` y ábrelo. La primera vez A
   entreno (KeepAwake), aviso de fin de descanso con sonido y vibración (Local Notifications),
   exportar (Filesystem + Share) y botón atrás.
 - `scripts/build.mjs` — empaqueta todo en `www/` (incluye las fuentes, funciona sin internet).
-- `scripts/icons.mjs` — genera el ícono y la pantalla de inicio.
+- `scripts/icons.mjs` — genera el ícono y la pantalla de inicio desde `resources/logo-kratos.png`.
+- `scripts/adaptar.mjs` — convierte una versión nueva del artifact de Claude.ai en `src/index.html`.
 - `.github/workflows/apk.yml` — en cada push a `main` compila el APK firmado y lo publica en Releases.
 
 ## Datos
@@ -35,6 +36,13 @@ Al importar se reemplazan solo las secciones que vienen en el archivo.
 GitHub Actions firma con la llave guardada en los secretos `KRATOS_KEYSTORE_BASE64` y
 `KRATOS_KEYSTORE_PASSWORD`. Siempre la misma llave = las actualizaciones se instalan encima.
 No la pierdas: si cambia, hay que desinstalar la app (y se pierden los datos no exportados).
+
+## Traer una versión nueva desde Claude.ai
+
+1. Guarda el HTML del artifact en la carpeta del proyecto (por ejemplo `kratos (2).html`).
+2. `npm run adaptar -- "kratos (2).html"`. Quita lo de Claude y agrega guardado local, Ajustes,
+   Coach "en desarrollo", pantalla encendida y avisos de descanso. Respeta colores y diseño.
+3. Haz commit y push a `main`: GitHub Actions compila y publica el APK nuevo.
 
 ## Probar en el navegador
 

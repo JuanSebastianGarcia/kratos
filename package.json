@@ -4,6 +4,7 @@
   "private": true,
   "description": "Kratos - app de entrenamiento (Capacitor / Android)",
   "scripts": {
+    "adaptar": "node scripts/adaptar.mjs",
     "build": "node scripts/build.mjs",
     "sync": "npm run build && npx cap sync android",
     "icons": "node scripts/icons.mjs"

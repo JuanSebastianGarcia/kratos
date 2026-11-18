@@ -9,7 +9,9 @@ keystore/
 *.keystore
 
 # Archivo original del artifact de Claude.ai (la versión de la app está en src/index.html)
-kratos.html
+kratos*.html
 
 .DS_Store
 Thumbs.db
+# Capturas o imágenes de referencia del ícono (el logo usado está en resources/)
+Ícono*.png
