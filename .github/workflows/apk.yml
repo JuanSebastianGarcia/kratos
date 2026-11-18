@@ -48,7 +48,7 @@ jobs:
             echo "::error::Falta el secreto KRATOS_KEYSTORE_BASE64 (Settings > Secrets and variables > Actions)."
             exit 1
           fi
-          echo "$KS" | base64 -d > "$RUNNER_TEMP/kratos.p12"
+          printf '%s' "$KS" | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/kratos.p12"
           echo "KRATOS_KEYSTORE_FILE=$RUNNER_TEMP/kratos.p12" >> "$GITHUB_ENV"
 
       - name: Compilar APK firmado
