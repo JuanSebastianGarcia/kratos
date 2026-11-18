@@ -10,7 +10,7 @@
 <style>
 :root{
   --bg:#0E0F11;--s1:#17191C;--s2:#202328;--line:#2A2E34;--line2:#3A3F46;
-  --tx:#F2F3F5;--tx2:#C9CDD2;--mut:#9BA1A9;--acc:#C6F432;--acc-tx:#0E0F11;
+  --tx:#F2F3F5;--tx2:#C9CDD2;--mut:#9BA1A9;--acc:#FF6A1A;--acc-tx:#0E0F11;
   --warn:#FFC24B;--bad:#FF6B6B;--ok:#7BD88F;--nav:#121316;
   color-scheme:dark;
   box-sizing:border-box;
@@ -78,7 +78,7 @@ nav.tabs button.on{color:var(--acc);font-weight:600}
 .sets{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:8px 10px 12px;display:flex;flex-direction:column;gap:6px}
 .srow{display:grid;grid-template-columns:34px minmax(0,1fr) 70px 60px 44px;gap:8px;align-items:center;padding:6px 2px;border-radius:12px}
 .srow.head{font-size:11px;font-weight:600;color:var(--mut)}
-.srow.done{background:rgba(198,244,50,.10)}
+.srow.done{background:rgba(255,106,26,.10)}
 .srow.cur{background:var(--s2)}
 .sin{height:40px;width:100%;border-radius:10px;text-align:center;font-size:16px;font-weight:700;outline:none;color:var(--tx);background:var(--bg);border:1.5px solid var(--line2)}
 .sin:focus{border-color:var(--acc)}
@@ -95,7 +95,7 @@ nav.tabs button.on{color:var(--acc);font-weight:600}
 .seg button{border:0;border-radius:9px;background:transparent;color:var(--mut);font-weight:600;font-size:13px}
 .seg button.on{background:var(--line);color:var(--tx);font-weight:700}
 .goal{min-height:108px;border-radius:18px;padding:14px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:10px;text-align:left;background:var(--s1);border:1px solid var(--line)}
-.goal.on{background:rgba(198,244,50,.10);border:1.5px solid var(--acc)}
+.goal.on{background:rgba(255,106,26,.10);border:1.5px solid var(--acc)}
 .sw{width:44px;height:26px;border-radius:13px;background:var(--line2);position:relative;flex-shrink:0;border:0}
 .sw::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:10px;background:var(--tx2);transition:transform .15s}
 .sw.on{background:var(--acc)}.sw.on::after{transform:translateX(18px);background:var(--acc-tx)}
@@ -166,6 +166,7 @@ const I = {
  check:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>',
  spark:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>',
  search:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+ link:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
  send:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
  gear:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
  upload:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>',
@@ -199,6 +200,16 @@ function saveActivo(soon){ persist(soon); syncEntreno(); }
 /* ----- pantalla encendida y aviso de fin de descanso ----- */
 const REST_NOTIF = 1001;
 let restSig = '', restNotif = false;
+function textoSiguiente(a, d){
+  const ex = a.ejercicios[d.ex]; if (!ex) return 'Toca para continuar.';
+  if (typeof miembros === 'function' && typeof celdaAbierta === 'function') {
+    const m = miembros(a, d.ex), ab = celdaAbierta(a, m), esBi = m.length > 1;
+    if (ab) return 'Sigue: ' + ejName(a.ejercicios[ab.e].ejId) + (esBi ? ', ronda ' : ', serie ') + (ab.r + 1);
+    return (esBi ? 'Terminaste la biserie.' : 'Terminaste ' + ejName(ex.ejId) + '.') + ' Toca para continuar.';
+  }
+  const i = ex.series.findIndex(s => !s.done);
+  return i !== -1 ? 'Sigue: ' + ejName(ex.ejId) + ', serie ' + (i+1) : 'Terminaste ' + ejName(ex.ejId) + '. Toca para continuar.';
+}
 function syncEntreno(){
   const a = S.activo;
   KN.keepAwake(!!a);
@@ -210,9 +221,7 @@ function syncEntreno(){
   if (!d) { KN.notif.cancel(REST_NOTIF); return; }
   const at = d.inicio + d.objetivo*1000;
   restNotif = KN.notif.enabled && at > Date.now() + 500;
-  const ex = a.ejercicios[d.ex], i = ex ? ex.series.findIndex(s => !s.done) : -1;
-  const body = ex ? (i !== -1 ? 'Sigue: ' + ejName(ex.ejId) + ', serie ' + (i+1) : 'Terminaste ' + ejName(ex.ejId) + '. Toca para continuar.') : 'Toca para continuar.';
-  KN.notif.schedule(REST_NOTIF, at, '¡Descanso terminado!', body);
+  KN.notif.schedule(REST_NOTIF, at, '¡Descanso terminado!', textoSiguiente(a, d));
 }
 
 function applyLoaded(o){
@@ -265,13 +274,17 @@ function normalizar(o){
   presentes.forEach(k => { if (k === 'perfil' ? !isObj(o[k]) : !Array.isArray(o[k])) throw '"' + k + '" no tiene el formato esperado.'; });
   const r = {};
   if (o.ejercicios) r.ejercicios = o.ejercicios.filter(e => isObj(e) && e.nombre).map(e => ({ id: String(e.id || uid()), nombre: String(e.nombre), grupo: GRUPOS.includes(e.grupo) ? e.grupo : 'Otro' }));
-  if (o.rutinas) r.rutinas = o.rutinas.filter(x => isObj(x) && x.nombre).map(x => ({ id: String(x.id || uid()), nombre: String(x.nombre), dias: Array.isArray(x.dias) ? x.dias.map(Number).filter(d => d >= 0 && d <= 6) : [],
-    items: (Array.isArray(x.items) ? x.items : []).filter(isObj).map(it => ({ ejId: String(it.ejId), series: +it.series || 3, repsMin: +it.repsMin || 8, repsMax: +it.repsMax || +it.repsMin || 12, descanso: +it.descanso || 90 })) }));
+  if (o.rutinas) r.rutinas = o.rutinas.filter(x => isObj(x) && x.nombre).map(x => {
+    // "grupo" en un ítem de rutina = id de la biserie a la que pertenece
+    const items = (Array.isArray(x.items) ? x.items : []).filter(isObj).map(it => ({ ejId: String(it.ejId), series: +it.series || 3, repsMin: +it.repsMin || 8, repsMax: +it.repsMax || +it.repsMin || 12, descanso: +it.descanso || 90, grupo: it.grupo ? String(it.grupo) : null }));
+    if (typeof normalizarGrupos === 'function') normalizarGrupos(items);
+    return { id: String(x.id || uid()), nombre: String(x.nombre), dias: Array.isArray(x.dias) ? x.dias.map(Number).filter(d => d >= 0 && d <= 6) : [], items };
+  });
   if (o.perfil) r.perfil = Object.assign({ pesoMeta: null }, o.perfil);
   if (o.sesiones) r.sesiones = o.sesiones.filter(s => isObj(s) && Array.isArray(s.ejercicios) && !isNaN(toMs(s.inicio))).map(s => {
     const ini = toMs(s.inicio), fin = toMs(s.fin);
     return Object.assign({}, s, { id: String(s.id || uid()), nombre: String(s.nombre || 'Entreno'), inicio: ini, fin: isNaN(fin) ? ini : fin,
-      ejercicios: s.ejercicios.filter(e => isObj(e) && Array.isArray(e.series)).map(e => Object.assign({}, e, { ejId: String(e.ejId), series: e.series.filter(isObj).map(z => ({ kg: num(z.kg) || 0, reps: num(z.reps) || 0, descanso: z.descanso == null ? null : +z.descanso })) })) });
+      ejercicios: s.ejercicios.filter(e => isObj(e) && Array.isArray(e.series)).map(e => Object.assign({}, e, { ejId: String(e.ejId), grupo: e.grupo ? String(e.grupo) : null, series: e.series.filter(isObj).map(z => ({ kg: num(z.kg) || 0, reps: num(z.reps) || 0, descanso: z.descanso == null ? null : +z.descanso })) })) });
   });
   if (o.medidas) r.medidas = o.medidas.filter(m => isObj(m) && m.fecha).map(m => ({ id: String(m.id || uid()), fecha: String(m.fecha).slice(0, 10), peso: num(m.peso) || null, grasa: num(m.grasa) || null, partes: isObj(m.partes) ? m.partes : {} }));
   if (o.analisis) r.analisis = o.analisis.filter(a => isObj(a) && isObj(a.res)).map(a => Object.assign({}, a, { id: String(a.id || uid()), fecha: isNaN(toMs(a.fecha)) ? Date.now() : toMs(a.fecha), objetivos: Array.isArray(a.objetivos) ? a.objetivos : [], semanas: +a.semanas || 0, chat: Array.isArray(a.chat) ? a.chat : [],
@@ -416,18 +429,44 @@ function vRutinas(){
 }
 
 /* ----- Editor de rutina ----- */
+function bloqueDe(arr, i){ const g = arr[i].grupo; let s = i, e = i; if (g) { while (s > 0 && arr[s-1].grupo === g) s--; while (e < arr.length - 1 && arr[e+1].grupo === g) e++; } return [s, e]; }
+function normalizarGrupos(items){
+  const visto = {};
+  for (let i = 0; i < items.length; i++) {
+    const g = items[i].grupo; if (!g) continue;
+    const prevSame = i > 0 && items[i-1].grupo === g;
+    if (!prevSame && visto[g]) { const ng = uid(); let j = i; while (j < items.length && items[j].grupo === g) { items[j].grupo = ng; j++; } }
+    visto[items[i].grupo] = true;
+  }
+  for (let i = 0; i < items.length; i++) { const g = items[i].grupo; if (g && !(i > 0 && items[i-1].grupo === g) && !(i < items.length - 1 && items[i+1].grupo === g)) items[i].grupo = null; }
+  for (let i = 0; i < items.length; i++) { if (items[i].grupo) { const [st] = bloqueDe(items, i); if (st !== i) items[i].series = items[st].series; } }
+}
 function vEditor(){
   const d = ui.draft;
   const dias = DIAS.map((l, i) => '<button class="dtog' + (d.dias.includes(i) ? ' on' : '') + '" data-a="toggleDia" data-i="' + i + '" aria-pressed="' + d.dias.includes(i) + '" aria-label="' + DIAS_LARGO[i] + '">' + l + '</button>').join('');
-  const items = d.items.map((it, i) => {
-    const desc = [30,45,60,75,90,120,150,180,240,300];
-    return '<div class="card" style="padding:12px 12px 14px;gap:10px"><div class="row"><span class="num">' + (i+1) + '</span><span style="flex:1;font-weight:600">' + esc(ejName(it.ejId)) + '</span><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="-1" aria-label="Subir"' + (i === 0 ? ' disabled' : '') + '>' + I.up + '</button><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="1" aria-label="Bajar"' + (i === d.items.length - 1 ? ' disabled' : '') + '>' + I.dn + '</button><button class="ico" style="width:36px;height:36px;color:var(--mut)" data-a="quitarItem" data-i="' + i + '" aria-label="Quitar">' + I.x + '</button></div>' +
-      '<div class="row" style="gap:8px;flex-wrap:wrap"><label class="col" style="gap:4px"><span class="lbl">Series</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="series" value="' + esc(it.series) + '"></label><label class="col" style="gap:4px"><span class="lbl">Reps mín.</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="repsMin" value="' + esc(it.repsMin) + '"></label><label class="col" style="gap:4px"><span class="lbl">Reps máx.</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="repsMax" value="' + esc(it.repsMax) + '"></label><label class="col" style="gap:4px;flex:1;min-width:96px"><span class="lbl">Descanso</span><select class="field" style="height:40px;font-size:15px;border-radius:10px" data-ch="item" data-i="' + i + '" data-f="descanso">' + desc.map(s => '<option value="' + s + '"' + (+it.descanso === s ? ' selected' : '') + '>' + mmss(s) + '</option>').join('') + '</select></label></div></div>';
-  }).join('');
+  const desc = [30,45,60,75,90,120,150,180,240,300];
+  let items = '';
+  d.items.forEach((it, i) => {
+    const enG = !!it.grupo; const [st, en] = bloqueDe(d.items, i);
+    const esPrimero = !enG || st === i, esUltimo = !enG || en === i;
+    const letra = enG ? String.fromCharCode(65 + i - st) : '';
+    const serieCampo = esPrimero ? '<label class="col" style="gap:4px"><span class="lbl">' + (enG ? 'Rondas' : 'Series') + '</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="series" value="' + esc(it.series) + '"></label>' : '';
+    const descCampo = esUltimo ? '<label class="col" style="gap:4px;flex:1;min-width:110px"><span class="lbl">' + (enG ? 'Descanso tras la ronda' : 'Descanso') + '</span><select class="field" style="height:40px;font-size:15px;border-radius:10px" data-ch="item" data-i="' + i + '" data-f="descanso">' + desc.map(x => '<option value="' + x + '"' + (+it.descanso === x ? ' selected' : '') + '>' + mmss(x) + '</option>').join('') + '</select></label>' : '';
+    const top = enG && esPrimero ? '<div class="row" style="gap:8px"><span class="tag acc">Biserie</span><span class="mut" style="font-size:12px">Se hacen seguidos, sin descanso entre ellos</span></div>' : '';
+    items += '<div class="card' + (enG ? ' hi' : '') + '" style="padding:12px 12px 14px;gap:10px' + (enG ? ';background:rgba(255,106,26,.06)' : '') + '">' + top + '<div class="row"><span class="num"' + (enG ? ' style="background:var(--acc);color:var(--acc-tx)"' : '') + '>' + (enG ? letra : (i+1)) + '</span><span style="flex:1;font-weight:600">' + esc(ejName(it.ejId)) + '</span><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="-1" aria-label="Subir"' + (i === 0 ? ' disabled' : '') + '>' + I.up + '</button><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="1" aria-label="Bajar"' + (i === d.items.length - 1 ? ' disabled' : '') + '>' + I.dn + '</button><button class="ico" style="width:36px;height:36px;color:var(--mut)" data-a="quitarItem" data-i="' + i + '" aria-label="Quitar">' + I.x + '</button></div>' +
+      '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">' + serieCampo + '<label class="col" style="gap:4px"><span class="lbl">Reps mín.</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="repsMin" value="' + esc(it.repsMin) + '"></label><label class="col" style="gap:4px"><span class="lbl">Reps máx.</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="repsMax" value="' + esc(it.repsMax) + '"></label>' + descCampo + (esUltimo ? '' : '<span class="mut" style="font-size:12px;padding-bottom:10px">Sin descanso, sigue ' + String.fromCharCode(66 + i - st) + '</span>') + '</div></div>';
+    if (i < d.items.length - 1) {
+      const unido = enG && d.items[i+1].grupo === it.grupo;
+      items += unido
+        ? '<div class="row" style="justify-content:center;gap:8px;margin:-4px 0"><span class="acc" style="font-size:12px;font-weight:600">↓ sin descanso</span><button class="tag" style="border:0;cursor:pointer" data-a="separar" data-i="' + i + '">Separar</button></div>'
+        : '<div class="row" style="justify-content:center;margin:-4px 0"><button class="tag" style="border:1px dashed var(--line2);background:transparent;color:var(--mut);cursor:pointer;padding:6px 12px" data-a="unir" data-i="' + i + '">' + I.link + ' Unir en biserie</button></div>';
+    }
+  });
   return '<div class="row between" style="margin:-12px -8px 0"><button class="ico" data-a="cancelarEditor" aria-label="Volver">' + I.back + '</button><span style="font-weight:600">' + (d.isNew ? 'Nueva rutina' : 'Editar rutina') + '</span><button class="ico" style="width:auto;padding:0 12px;color:var(--acc);font-weight:700" data-a="guardarRutina">Guardar</button></div>' +
     '<label class="col" style="gap:8px"><span class="sec">Nombre</span><input class="field disp" style="font-size:17px" data-in="draftNombre" value="' + esc(d.nombre) + '" placeholder="Ej: Empuje A"></label>' +
     '<div class="col" style="gap:8px"><span class="sec">Días</span><div class="grid7">' + dias + '</div></div>' +
-    '<div class="col"><div class="row between"><span class="sec">Ejercicios, en orden</span><span class="mut" style="font-size:12px">' + d.items.length + '</span></div>' + items +
+    '<div class="col"><div class="row between"><span class="sec">Ejercicios, en orden</span><span class="mut" style="font-size:12px">' + d.items.length + '</span></div>' +
+    (d.items.length > 1 ? '<p class="note" style="margin:0">Para hacer una biserie, toca “Unir en biserie” entre dos ejercicios.</p>' : '') + items +
     '<button class="btn dash" data-a="abrirPicker">' + I.plus + 'Añadir ejercicio</button></div>' +
     (d.isNew ? '' : '<button class="btn soft" style="color:var(--bad)" data-a="borrarRutina">' + I.trash + 'Borrar rutina</button>');
 }
@@ -447,35 +486,70 @@ function vPicker(){
 /* ----- Entreno ----- */
 function startEntreno(r){
   if (S.activo) { toast('Ya tienes un entreno en curso.'); go('entreno'); return; }
+  const items = JSON.parse(JSON.stringify(r.items)); normalizarGrupos(items);
   S.activo = { id: uid(), rutinaId: r.id, nombre: r.nombre, inicio: Date.now(), idx: 0, descanso: null,
-    ejercicios: r.items.map(it => {
+    ejercicios: items.map(it => {
       const last = ultimaVez(it.ejId);
       const n = Math.max(1, +it.series || 3);
-      return { ejId: it.ejId, objetivo: (+it.series || n) + ' × ' + (it.repsMin && it.repsMax && it.repsMin !== it.repsMax ? it.repsMin + '–' + it.repsMax : (it.repsMax || it.repsMin || '?')), descanso: +it.descanso || 90,
+      const reps = it.repsMin && it.repsMax && it.repsMin !== it.repsMax ? it.repsMin + '–' + it.repsMax : (it.repsMax || it.repsMin || '?');
+      return { ejId: it.ejId, grupo: it.grupo || null, reps: reps, objetivo: n + ' × ' + reps, descanso: +it.descanso || 90,
         series: Array.from({ length: n }, (_, i) => { const p = last ? (last[i] || last[last.length-1]) : null; return { kg: '', reps: '', done: false, descanso: null, sugKg: p ? p.kg : '', sugReps: p ? p.reps : (it.repsMax || it.repsMin || ''), prev: p ? fmt(p.kg) + ' × ' + p.reps : '' }; }) };
     }) };
   KN.notif.init(true).then(() => { restSig = ''; syncEntreno(); });
   saveActivo();
   go('entreno');
 }
+function miembros(a, idx){ const [s, e] = bloqueDe(a.ejercicios, idx == null ? a.idx : idx); const m = []; for (let i = s; i <= e; i++) m.push(i); return m; }
+function nRondas(a, m){ return Math.max(...m.map(i => a.ejercicios[i].series.length)); }
+function celdaAbierta(a, m){ const R = nRondas(a, m); for (let r = 0; r < R; r++) for (const i of m) { const s = a.ejercicios[i].series[r]; if (s && !s.done) return { e: i, r: r }; } return null; }
+function bloques(a){ const out = []; let i = 0; while (i < a.ejercicios.length) { const [s, e] = bloqueDe(a.ejercicios, i); out.push([s, e]); i = e + 1; } return out; }
+function inputsSerie(e, r, s, cls){
+  return '<input class="sin" inputmode="decimal" aria-label="Peso" data-in="set" data-e="' + e + '" data-i="' + r + '" data-f="kg" value="' + esc(s.kg) + '" placeholder="' + esc(s.sugKg) + '"><input class="sin" inputmode="numeric" aria-label="Repeticiones" data-in="set" data-e="' + e + '" data-i="' + r + '" data-f="reps" value="' + esc(s.reps) + '" placeholder="' + esc(s.sugReps) + '"><button class="chk' + (s.done ? ' on' : '') + '" data-a="toggleSet" data-e="' + e + '" data-i="' + r + '" aria-pressed="' + s.done + '" aria-label="Marcar hecha">' + I.check + '</button>';
+}
 function vEntreno(){
   const a = S.activo;
   if (!a) { ui.view = 'inicio'; return vInicio(); }
-  const ex = a.ejercicios[a.idx];
-  const totS = a.ejercicios.reduce((t, e) => t + e.series.length, 0);
-  const doneS = a.ejercicios.reduce((t, e) => t + e.series.filter(s => s.done).length, 0);
-  const prog = a.ejercicios.map((e, i) => '<span class="' + (e.series.every(s => s.done) ? 'on' : (i === a.idx ? 'cur' : '')) + '"></span>').join('');
-  const firstOpen = ex.series.findIndex(s => !s.done);
-  const rows = ex.series.map((s, i) => '<div class="srow' + (s.done ? ' done' : (i === firstOpen ? ' cur' : '')) + '"><span style="text-align:center;font-weight:700">' + (i+1) + '</span><span class="mut" style="font-size:13px">' + (s.prev || '—') + '</span><input class="sin" inputmode="decimal" aria-label="Peso serie ' + (i+1) + '" data-in="set" data-i="' + i + '" data-f="kg" value="' + esc(s.kg) + '" placeholder="' + esc(s.sugKg) + '"><input class="sin" inputmode="numeric" aria-label="Repeticiones serie ' + (i+1) + '" data-in="set" data-i="' + i + '" data-f="reps" value="' + esc(s.reps) + '" placeholder="' + esc(s.sugReps) + '"><button class="chk' + (s.done ? ' on' : '') + '" data-a="toggleSet" data-i="' + i + '" aria-pressed="' + s.done + '" aria-label="Serie ' + (i+1) + ' hecha">' + I.check + '</button></div>').join('');
-  const nx = a.ejercicios[a.idx + 1];
+  a.idx = bloqueDe(a.ejercicios, Math.min(a.idx, a.ejercicios.length - 1))[0];
+  const m = miembros(a), esBi = m.length > 1, R = nRondas(a, m), abierta = celdaAbierta(a, m);
+  const bl = bloques(a), bIdx = bl.findIndex(x => x[0] === a.idx), nxB = bl[bIdx + 1];
+  const totS = a.ejercicios.reduce((t, e) => t + e.series.filter(s => !s.skip).length, 0);
+  const doneS = a.ejercicios.reduce((t, e) => t + e.series.filter(s => s.done && !s.skip).length, 0);
+  const prog = bl.map((x, k) => { let all = true; for (let i = x[0]; i <= x[1]; i++) if (!a.ejercicios[i].series.every(s => s.done)) all = false; return '<span class="' + (all ? 'on' : (k === bIdx ? 'cur' : '')) + '"></span>'; }).join('');
+  const L = i => String.fromCharCode(65 + i - m[0]);
+  let cuerpo = '';
+  if (!esBi) {
+    const ex = a.ejercicios[a.idx];
+    const rows = ex.series.map((s, r) => '<div class="srow' + (s.done ? ' done' : (abierta && abierta.r === r ? ' cur' : '')) + '"><span style="text-align:center;font-weight:700">' + (r+1) + '</span><span class="mut" style="font-size:13px">' + (s.prev || '—') + '</span>' + inputsSerie(a.idx, r, s) + '</div>').join('');
+    cuerpo = '<div class="col" style="gap:6px"><h2>' + esc(ejName(ex.ejId)) + '</h2><span class="mut" style="font-size:13px">Objetivo: ' + esc(ex.objetivo) + ', descanso ' + mmss(ex.descanso) + '</span></div>' +
+      (abierta ? '<button class="btn ghost" style="height:46px;font-size:15px" data-a="abrirBiserie">' + I.link + ' Hacer biserie con otro ejercicio</button>' : '') +
+      '<div class="sets"><div class="srow head"><span style="text-align:center">Serie</span><span>Anterior</span><span style="text-align:center">kg</span><span style="text-align:center">Reps</span><span></span></div>' + rows + botonesSerie(ex.series.length > 1, 'serie') + '</div>';
+  } else {
+    const ultimo = a.ejercicios[m[m.length - 1]];
+    cuerpo = '<div class="col" style="gap:8px"><div class="row" style="gap:8px"><span class="tag acc">Biserie</span><span class="mut" style="font-size:13px;flex:1">' + (abierta ? 'Ronda ' + (abierta.r + 1) + ' de ' + R : R + ' rondas hechas') + '</span>' + (abierta ? '<button class="tag" style="border:0;cursor:pointer" data-a="deshacerBiserie">Deshacer</button>' : '') + '</div>' +
+      m.map(i => '<div class="row" style="gap:10px"><span class="num" style="background:var(--acc);color:var(--acc-tx)">' + L(i) + '</span><span class="col" style="gap:2px"><span class="disp" style="font-size:18px;line-height:1.2">' + esc(ejName(a.ejercicios[i].ejId)) + '</span><span class="mut" style="font-size:12px">' + esc(a.ejercicios[i].reps) + ' reps</span></span></div>').join('') + '</div>' +
+      '<div class="item" style="font-size:13px;color:var(--tx2);padding:10px 12px">Haz ' + m.map(L).join(' y luego ') + ' sin descansar. El descanso (' + mmss(ultimo.descanso) + ') arranca al terminar la ronda.</div>';
+    for (let r = 0; r < R; r++) {
+      const cur = abierta && abierta.r === r, done = m.every(i => { const s = a.ejercicios[i].series[r]; return !s || s.done; });
+      const ultD = (a.ejercicios[m[m.length - 1]].series[r] || {}).descanso;
+      cuerpo += '<div class="sets" style="' + (cur ? 'border:1.5px solid var(--acc)' : (done ? 'background:rgba(255,106,26,.07);border-color:transparent' : '')) + '"><div class="row between" style="padding:4px 2px 0"><span style="font-size:13px;font-weight:700' + (cur ? ';color:var(--acc)' : '') + '">Ronda ' + (r + 1) + '</span><span class="mut" style="font-size:12px">' + (cur ? 'Ahora: ' + L(abierta.e) : (done && ultD != null ? 'descansaste ' + mmss(ultD) : '')) + '</span></div>' +
+        m.map(i => { const s = a.ejercicios[i].series[r]; if (!s) return ''; if (s.skip) return '<div class="srow"><span class="num" style="width:30px;height:26px;font-size:12px">' + L(i) + '</span><span class="mut" style="font-size:12px;grid-column:span 4">Aún no estaba en la biserie</span></div>'; return '<div class="srow' + (s.done ? ' done' : (abierta && abierta.e === i && abierta.r === r ? ' cur' : '')) + '"><span class="num" style="width:30px;height:26px;font-size:12px">' + L(i) + '</span><span class="mut" style="font-size:12px">' + (s.prev || '—') + '</span>' + inputsSerie(i, r, s) + '</div>'; }).join('') + '</div>';
+    }
+    cuerpo += '<div class="sets" style="padding:10px">' + botonesSerie(R > 1, 'ronda') + '</div>';
+  }
+  const nombreB = x => { const n = []; for (let i = x[0]; i <= x[1]; i++) n.push(ejName(a.ejercicios[i].ejId)); return n.join(' + '); };
+  let textoBtn;
+  if (!abierta) textoBtn = nxB ? 'Siguiente ejercicio' : 'Terminar entreno';
+  else if (!esBi) textoBtn = 'Hecha, iniciar descanso';
+  else textoBtn = abierta.e === m[m.length - 1] ? 'Hecha ' + L(abierta.e) + ', iniciar descanso' : 'Hecha ' + L(abierta.e) + ', sigue ' + L(abierta.e + 1);
   return '<div class="row between" style="margin:-12px -8px 0"><button class="ico" data-a="go" data-v="inicio" aria-label="Minimizar entreno">' + I.down + '</button><div class="col" style="gap:2px;align-items:center"><span class="mut" style="font-size:13px">' + esc(a.nombre) + '</span><span class="disp" style="font-size:20px;font-variant-numeric:tabular-nums" data-clock>' + hms((Date.now() - a.inicio)/1000) + '</span></div><button class="pill" style="height:40px;border-radius:12px" data-a="terminar">Terminar</button></div>' +
-    '<div class="col" style="gap:8px"><div class="row between mut" style="font-size:12px"><span>Ejercicio ' + (a.idx+1) + ' de ' + a.ejercicios.length + '</span><span>' + doneS + ' de ' + totS + ' series</span></div><div class="prog">' + prog + '</div></div>' +
-    '<div class="col" style="gap:6px"><h2>' + esc(ejName(ex.ejId)) + '</h2><span class="mut" style="font-size:13px">Objetivo: ' + esc(ex.objetivo) + ', descanso ' + mmss(ex.descanso) + '</span></div>' +
-    '<div class="sets"><div class="srow head"><span style="text-align:center">Serie</span><span>Anterior</span><span style="text-align:center">kg</span><span style="text-align:center">Reps</span><span></span></div>' + rows +
-    '<div class="row" style="gap:8px;margin-top:4px"><button class="btn soft" style="height:44px;font-size:14px" data-a="addSet">' + I.plus + 'Añadir serie</button>' + (ex.series.length > 1 ? '<button class="btn soft" style="height:44px;font-size:14px;width:auto" data-a="delSet" aria-label="Quitar última serie">' + I.trash + '</button>' : '') + '</div></div>' +
-    (firstOpen === -1 ? '<div class="card hi" style="gap:10px"><span style="font-weight:700">Ejercicio completado</span><div class="row" style="gap:8px"><button class="btn soft" style="color:var(--tx);font-size:15px" data-a="addSet">' + I.plus + 'Otra serie</button><button class="btn" style="font-size:15px" data-a="hechaSiguiente">' + (nx ? 'Siguiente ejercicio' : 'Terminar') + '</button></div></div>' : '') +
-    (nx ? '<div class="item" style="background:#141518"><span class="mut" style="font-size:13px">Siguiente</span><span style="flex:1;font-weight:600">' + esc(ejName(nx.ejId)) + '</span><span class="mut" style="font-size:13px">' + esc(nx.objetivo) + '</span></div>' : '<p class="note" style="margin:0">Es el último ejercicio. Al terminar, toca “Terminar”.</p>') +
-    '<div class="bar"><div class="in"><button class="ico box" style="width:52px;height:52px;border-radius:14px" data-a="exNav" data-d="-1" aria-label="Ejercicio anterior"' + (a.idx === 0 ? ' disabled' : '') + '>' + I.back + '</button><button class="btn" style="flex:1" data-a="hechaSiguiente">' + (firstOpen === -1 ? (nx ? 'Siguiente ejercicio' : 'Terminar entreno') : 'Hecha, iniciar descanso') + '</button><button class="ico box" style="width:52px;height:52px;border-radius:14px" data-a="exNav" data-d="1" aria-label="Siguiente ejercicio"' + (nx ? '' : ' disabled') + '>' + I.next + '</button></div></div>';
+    '<div class="col" style="gap:8px"><div class="row between mut" style="font-size:12px"><span>Bloque ' + (bIdx+1) + ' de ' + bl.length + '</span><span>' + doneS + ' de ' + totS + ' series</span></div><div class="prog">' + prog + '</div></div>' +
+    cuerpo +
+    (!abierta ? '<div class="card hi" style="gap:10px"><span style="font-weight:700">' + (esBi ? 'Biserie completada' : 'Ejercicio completado') + '</span><div class="row" style="gap:8px"><button class="btn soft" style="color:var(--tx);font-size:15px" data-a="addSet">' + I.plus + (esBi ? 'Otra ronda' : 'Otra serie') + '</button><button class="btn" style="font-size:15px" data-a="hechaSiguiente">' + (nxB ? 'Siguiente' : 'Terminar') + '</button></div></div>' : '') +
+    (nxB ? '<div class="item" style="background:#141518"><span class="mut" style="font-size:13px">Siguiente</span><span style="flex:1;font-weight:600">' + esc(nombreB(nxB)) + '</span>' + (nxB[1] > nxB[0] ? '<span class="tag acc">Biserie</span>' : '') + '</div>' : '<p class="note" style="margin:0">Es el último bloque. Al terminar, toca “Terminar”.</p>') +
+    '<div class="bar"><div class="in"><button class="ico box" style="width:52px;height:52px;border-radius:14px" data-a="exNav" data-d="-1" aria-label="Anterior"' + (bIdx === 0 ? ' disabled' : '') + '>' + I.back + '</button><button class="btn" style="flex:1;font-size:15px" data-a="hechaSiguiente">' + textoBtn + '</button><button class="ico box" style="width:52px;height:52px;border-radius:14px" data-a="exNav" data-d="1" aria-label="Siguiente"' + (nxB ? '' : ' disabled') + '>' + I.next + '</button></div></div>';
+}
+function botonesSerie(puedeQuitar, nombre){
+  return '<div class="row" style="gap:8px;margin-top:4px"><button class="btn soft" style="height:44px;font-size:14px" data-a="addSet">' + I.plus + 'Añadir ' + nombre + '</button>' + (puedeQuitar ? '<button class="btn soft" style="height:44px;font-size:14px;width:auto" data-a="delSet" aria-label="Quitar última ' + nombre + '">' + I.trash + '</button>' : '') + '</div>';
 }
 function vDescanso(){
   const a = S.activo, d = a.descanso;
@@ -483,17 +557,17 @@ function vDescanso(){
   const rest = d.objetivo - el;
   const frac = Math.max(0, Math.min(1, rest / d.objetivo));
   const C = 754;
-  const ex = a.ejercicios[d.ex];
+  const m = miembros(a, d.ex), esBi = m.length > 1, ab = celdaAbierta(a, m);
+  const [, fin] = bloqueDe(a.ejercicios, d.ex), hayMas = fin < a.ejercicios.length - 1;
   let sig = '';
-  const nextOpen = ex.series.findIndex(s => !s.done);
-  if (nextOpen !== -1) { const s = ex.series[nextOpen]; sig = esc(ejName(ex.ejId)) + ', serie ' + (nextOpen+1) + '<span class="disp acc" style="float:right">' + fmt(num(s.kg) || num(s.sugKg)) + ' kg × ' + (s.reps || s.sugReps || '?') + '</span>'; }
-  else { const n = a.ejercicios[d.ex + 1]; sig = 'Terminaste ' + esc(ejName(ex.ejId)) + '. ' + (n ? '¿Haces otra serie o sigues con ' + esc(ejName(n.ejId)) + '?' : '¿Haces otra serie o terminas?'); }
+  if (ab) { const s = a.ejercicios[ab.e].series[ab.r]; sig = (esBi ? 'Ronda ' + (ab.r + 1) + ': ' + String.fromCharCode(65 + ab.e - m[0]) + ', ' : '') + esc(ejName(a.ejercicios[ab.e].ejId)) + (esBi ? '' : ', serie ' + (ab.r + 1)) + (function(){ const k = !isNaN(num(s.kg)) ? num(s.kg) : num(s.sugKg); return '<span class="disp acc" style="float:right">' + (isNaN(k) ? '' : fmt(k) + ' kg × ') + (s.reps || s.sugReps || '?') + (isNaN(k) ? ' reps' : '') + '</span>'; })(); }
+  else { const n = a.ejercicios[fin + 1]; sig = (esBi ? 'Terminaste la biserie. ' : 'Terminaste ' + esc(ejName(a.ejercicios[d.ex].ejId)) + '. ') + (n ? '¿Haces otra ' + (esBi ? 'ronda' : 'serie') + ' o sigues con ' + esc(ejName(n.ejId)) + '?' : '¿Haces otra ' + (esBi ? 'ronda' : 'serie') + ' o terminas?'); }
   return '<div class="overlay" role="dialog" aria-label="Descanso"><div class="in">' +
     '<div class="row between"><span class="sec acc">Descanso</span><span class="mut" data-clock2>' + hms((Date.now() - a.inicio)/1000) + '</span></div>' +
     '<div class="col" style="flex:1;align-items:center;justify-content:center;gap:24px"><div style="position:relative;width:260px;height:260px"><svg width="260" height="260" viewBox="0 0 272 272" aria-hidden="true"><circle cx="136" cy="136" r="120" fill="none" stroke="#202328" stroke-width="14"/><circle id="ring" cx="136" cy="136" r="120" fill="none" stroke="' + (rest <= 0 ? 'var(--warn)' : 'var(--acc)') + '" stroke-width="14" stroke-linecap="round" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - frac)) + '" transform="rotate(-90 136 136)"/></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span id="restBig" class="disp" style="font-size:68px;letter-spacing:-2px;font-variant-numeric:tabular-nums" aria-live="off">' + (rest >= 0 ? mmss(rest) : '+' + mmss(-rest)) + '</span><span id="restSub" class="mut" style="font-size:14px">' + (rest >= 0 ? 'de ' + mmss(d.objetivo) : 'Tiempo cumplido') + '</span></div></div>' +
     '<div class="row" style="gap:12px"><button class="btn soft" style="width:96px;color:var(--tx)" data-a="ajDesc" data-s="-15">−15 s</button><button class="btn soft" style="width:96px;color:var(--tx)" data-a="ajDesc" data-s="15">+15 s</button></div></div>' +
     '<div class="card"><span class="sec">A continuación</span><span style="font-weight:600">' + sig + '</span></div>' +
-    (nextOpen === -1 ? '<div class="col" style="gap:10px"><button class="btn" data-a="sigEjDesc">' + (a.ejercicios[d.ex + 1] ? 'Continuar con el siguiente ejercicio' : 'Terminar entreno') + '</button><button class="btn soft" style="color:var(--tx)" data-a="otraSerieDesc">' + I.plus + 'Hacer otra serie</button></div>' : '<button class="btn" data-a="finDesc">Empezar siguiente serie</button>') + '</div></div>';
+    (!ab ? '<div class="col" style="gap:10px"><button class="btn" data-a="sigEjDesc">' + (hayMas ? 'Continuar con el siguiente ejercicio' : 'Terminar entreno') + '</button><button class="btn soft" style="color:var(--tx)" data-a="otraSerieDesc">' + I.plus + (esBi ? 'Hacer otra ronda' : 'Hacer otra serie') + '</button></div>' : '<button class="btn" data-a="finDesc">' + (esBi ? 'Empezar siguiente ronda' : 'Empezar siguiente serie') + '</button>') + '</div></div>';
 }
 let beepCtx = null;
 function beep(){
@@ -518,16 +592,18 @@ function tick(){
   }
 }
 setInterval(tick, 1000);
-function marcarSerie(i){
-  const a = S.activo, ex = a.ejercicios[a.idx], s = ex.series[i];
+function marcarSerie(e, i){
+  const a = S.activo, ex = a.ejercicios[e], s = ex.series[i];
   if (s.done) { s.done = false; saveActivo(); render(); return; }
   const kg = num(s.kg !== '' ? s.kg : s.sugKg), reps = num(s.reps !== '' ? s.reps : s.sugReps);
-  if (isNaN(reps) || reps <= 0) { toast('Escribe las repeticiones de la serie ' + (i+1) + '.'); return; }
+  if (isNaN(reps) || reps <= 0) { toast('Escribe las repeticiones.'); return; }
   if (s.kg === '') s.kg = isNaN(kg) ? '0' : String(s.sugKg === '' ? 0 : s.sugKg);
   if (s.reps === '') s.reps = String(reps);
   s.done = true; s.hecha = Date.now();
-  const quedan = a.ejercicios.some((e, k) => e.series.some(x => !x.done));
-  if (quedan) a.descanso = { inicio: Date.now(), objetivo: ex.descanso, ex: a.idx, set: i };
+  const m = miembros(a, e), ultimo = m[m.length - 1];
+  const quedan = a.ejercicios.some(x => x.series.some(z => !z.done));
+  // en biserie solo se descansa al terminar el último ejercicio de la ronda
+  if (quedan && e === ultimo) a.descanso = { inicio: Date.now(), objetivo: a.ejercicios[ultimo].descanso, ex: e, set: i };
   saveActivo(); render();
 }
 function finDescanso(){
@@ -538,19 +614,48 @@ function finDescanso(){
   saveActivo(); render();
 }
 function addSerie(){
-  const ex = S.activo.ejercicios[S.activo.idx], l = ex.series[ex.series.length - 1];
-  ex.series.push({ kg: '', reps: '', done: false, descanso: null, sugKg: l ? (l.kg || l.sugKg) : '', sugReps: l ? (l.reps || l.sugReps) : '', prev: '' });
+  const a = S.activo;
+  miembros(a).forEach(i => { const ex = a.ejercicios[i], l = ex.series[ex.series.length - 1]; ex.series.push({ kg: '', reps: '', done: false, descanso: null, sugKg: l ? (l.kg || l.sugKg) : '', sugReps: l ? (l.reps || l.sugReps) : '', prev: '' }); });
+}
+function candidatosBiserie(a){
+  const out = [], [, e] = bloqueDe(a.ejercicios, a.idx);
+  for (let j = e + 1; j < a.ejercicios.length; j++) { const x = a.ejercicios[j]; if (!x.grupo && !x.series.some(z => z.done)) out.push(j); }
+  return out;
+}
+function unirBiserie(j, ejId){
+  const a = S.activo, c = a.idx, A = a.ejercicios[c];
+  let B;
+  if (j != null) { B = a.ejercicios.splice(j, 1)[0]; }
+  else {
+    const last = ultimaVez(ejId);
+    B = { ejId: ejId, grupo: null, reps: A.reps, objetivo: A.objetivo, descanso: A.descanso, series: [] };
+    B._last = last;
+  }
+  const hechas = A.series.filter(z => z.done).length, faltan = A.series.length - hechas;
+  const pend = B.series.filter(z => !z.done);
+  const last = B._last !== undefined ? B._last : null; delete B._last;
+  const nuevas = [];
+  for (let k = 0; k < faltan; k++) {
+    if (pend[k]) nuevas.push(pend[k]);
+    else { const p = last ? (last[k] || last[last.length - 1]) : (pend[pend.length - 1] || null); nuevas.push({ kg: '', reps: '', done: false, descanso: null, sugKg: p ? (p.kg != null ? p.kg : p.sugKg) : '', sugReps: p ? (p.reps || p.sugReps || '') : (A.reps || ''), prev: last && last[k] ? fmt(last[k].kg) + ' × ' + last[k].reps : '' }); }
+  }
+  B.series = Array.from({ length: hechas }, () => ({ kg: '', reps: '', done: true, skip: true, descanso: null, sugKg: '', sugReps: '', prev: '' })).concat(nuevas);
+  B.descanso = A.descanso;
+  const g = uid(); A.grupo = g; B.grupo = g;
+  a.ejercicios.splice(c + 1, 0, B);
+  saveActivo(); render(); window.scrollTo(0, 0);
+  toast('Biserie creada: ' + ejName(A.ejId) + ' + ' + ejName(B.ejId));
 }
 function siguienteEj(){
-  const a = S.activo;
-  if (a.idx < a.ejercicios.length - 1) { a.idx++; saveActivo(); render(); window.scrollTo(0, 0); }
+  const a = S.activo, [, e] = bloqueDe(a.ejercicios, a.idx);
+  if (e < a.ejercicios.length - 1) { a.idx = e + 1; saveActivo(); render(); window.scrollTo(0, 0); }
   else { ui.sheet = { tipo: 'terminar' }; renderLayer(); }
 }
 function guardarSesion(){
   const a = S.activo; if (!a) return;
   if (a.descanso) { const s = a.ejercicios[a.descanso.ex].series[a.descanso.set]; if (s && s.descanso == null) s.descanso = Math.round((Date.now() - a.descanso.inicio)/1000); }
   const ses = { id: a.id, rutinaId: a.rutinaId, nombre: a.nombre, inicio: a.inicio, fin: Date.now(),
-    ejercicios: a.ejercicios.map(e => ({ ejId: e.ejId, nombre: ejName(e.ejId), series: e.series.filter(s => s.done).map(s => ({ kg: num(s.kg) || 0, reps: num(s.reps) || 0, descanso: s.descanso })) })).filter(e => e.series.length) };
+    ejercicios: a.ejercicios.map(e => ({ ejId: e.ejId, nombre: ejName(e.ejId), grupo: e.grupo || null, series: e.series.filter(s => s.done && !s.skip).map(s => ({ kg: num(s.kg) || 0, reps: num(s.reps) || 0, descanso: s.descanso })) })).filter(e => e.series.length) };
   S.activo = null; saveActivo();
   if (!ses.ejercicios.length) { ui.sheet = null; toast('No había series hechas. El entreno no se guardó.'); go('inicio'); return; }
   S.sesiones.unshift(ses); persist();
@@ -566,7 +671,7 @@ function lineSvg(pts, label){
   const X = i => 8 + i * (W - 40) / (pts.length - 1), Y = v => 12 + (H - 34) * (1 - (v - lo)/(hi - lo));
   const poly = pts.map((p, i) => X(i).toFixed(1) + ',' + Y(p.y).toFixed(1)).join(' ');
   const l = pts.length - 1;
-  return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '"><line x1="0" y1="' + Y(mx) + '" x2="' + W + '" y2="' + Y(mx) + '" stroke="#22252A"/><line x1="0" y1="' + Y(mn) + '" x2="' + W + '" y2="' + Y(mn) + '" stroke="#22252A"/><text x="' + (W-2) + '" y="' + (Y(mx) - 4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + fmt(mx) + '</text><text x="' + (W-2) + '" y="' + (Y(mn) - 4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + fmt(mn) + '</text><polyline points="' + poly + '" fill="none" stroke="#C6F432" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="' + X(l) + '" cy="' + Y(pts[l].y) + '" r="5" fill="#C6F432"/><text x="8" y="' + (H-4) + '" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + esc(pts[0].x) + '</text><text x="' + X(l) + '" y="' + (H-4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + esc(pts[l].x) + '</text></svg>';
+  return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '"><line x1="0" y1="' + Y(mx) + '" x2="' + W + '" y2="' + Y(mx) + '" stroke="#22252A"/><line x1="0" y1="' + Y(mn) + '" x2="' + W + '" y2="' + Y(mn) + '" stroke="#22252A"/><text x="' + (W-2) + '" y="' + (Y(mx) - 4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + fmt(mx) + '</text><text x="' + (W-2) + '" y="' + (Y(mn) - 4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + fmt(mn) + '</text><polyline points="' + poly + '" fill="none" stroke="#FF6A1A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="' + X(l) + '" cy="' + Y(pts[l].y) + '" r="5" fill="#FF6A1A"/><text x="8" y="' + (H-4) + '" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + esc(pts[0].x) + '</text><text x="' + X(l) + '" y="' + (H-4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + esc(pts[l].x) + '</text></svg>';
 }
 function vStats(){
   const pers = [[4,'4 sem'],[8,'2 meses'],[26,'6 meses'],[0,'Todo']];
@@ -697,12 +802,17 @@ function vSheet(){
   const s = ui.sheet;
   let h = '';
   if (s.tipo === 'terminar') {
-    const a = S.activo, done = a.ejercicios.reduce((t, e) => t + e.series.filter(x => x.done).length, 0), tot = a.ejercicios.reduce((t, e) => t + e.series.length, 0);
+    const a = S.activo, done = a.ejercicios.reduce((t, e) => t + e.series.filter(x => x.done && !x.skip).length, 0), tot = a.ejercicios.reduce((t, e) => t + e.series.filter(x => !x.skip).length, 0);
     h = '<span class="disp" style="font-size:22px">¿Terminar entreno?</span><span class="tx2">Hiciste ' + done + ' de ' + tot + ' series en ' + Math.round((Date.now() - a.inicio)/60000) + ' min.' + (done < tot ? ' Las series sin marcar no se guardan.' : '') + '</span><button class="btn" data-a="guardarEntreno">Guardar entreno</button><button class="btn soft" data-a="cerrarSheet">Seguir entrenando</button><button class="btn soft" style="color:var(--bad)" data-a="descartarEntreno">Descartar sin guardar</button>';
   } else if (s.tipo === 'resumen') {
     const x = s.ses, dur = Math.round((x.fin - x.inicio)/60000);
     const prsN = x.ejercicios.filter(e => { const best = Math.max(...e.series.map(z => z.kg)); return !S.sesiones.some(o => o.id !== x.id && o.ejercicios.some(oe => oe.ejId === e.ejId && oe.series.some(z => z.kg >= best))) && best > 0; }).length;
     h = '<span class="sec acc">Entreno guardado</span><span class="disp" style="font-size:24px">' + esc(x.nombre) + '</span><div class="grid3"><div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Duración</span><b>' + dur + '<small> min</small></b></div><div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Series</span><b>' + nSeries(x) + '</b></div><div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Volumen</span><b>' + fmt(volSesion(x)/1000, 2) + '<small> t</small></b></div></div>' + (prsN ? '<span class="acc" style="font-weight:600">Nuevo récord de peso en ' + prsN + ' ejercicio' + (prsN > 1 ? 's' : '') + '.</span>' : '') + '<button class="btn" data-a="cerrarSheet">Listo</button>';
+  } else if (s.tipo === 'biserie') {
+    const a = S.activo, cand = candidatosBiserie(a);
+    h = '<div class="row between"><span class="disp" style="font-size:22px">Hacer biserie</span><button class="ico" data-a="cerrarSheet" aria-label="Cerrar">' + I.x + '</button></div><span class="tx2" style="font-size:14px;line-height:1.45">Elige el ejercicio que vas a alternar con <b>' + esc(ejName(a.ejercicios[a.idx].ejId)) + '</b>. Se hacen seguidos y descansas al terminar los dos.</span>' +
+      (cand.length ? '<span class="sec">De esta rutina</span>' + cand.map(j => '<button class="item" style="text-align:left;color:var(--tx)" data-a="unirEntreno" data-j="' + j + '"><span class="col" style="gap:2px;flex:1"><span style="font-weight:600">' + esc(ejName(a.ejercicios[j].ejId)) + '</span><span class="mut" style="font-size:12px">' + esc(a.ejercicios[j].objetivo) + '</span></span>' + I.link + '</button>').join('') : '') +
+      '<button class="btn soft" style="color:var(--tx)" data-a="biserieOtro">' + I.search + 'Elegir otro ejercicio</button>';
   } else if (s.tipo === 'meta') {
     h = '<span class="disp" style="font-size:22px">Meta de peso</span><input class="field" id="metaIn" inputmode="decimal" placeholder="Ej: 80" value="' + (S.perfil.pesoMeta ? fmt(S.perfil.pesoMeta) : '') + '" aria-label="Meta de peso en kg"><button class="btn" data-a="guardarMeta">Guardar meta</button>' + (S.perfil.pesoMeta ? '<button class="btn soft" data-a="quitarMeta">Quitar meta</button>' : '');
   } else if (s.tipo === 'trabajando') {
@@ -721,16 +831,19 @@ const A = {
   editar: el => { const r = rutById(el.dataset.id); ui.draft = JSON.parse(JSON.stringify(r)); ui.draft.dias = ui.draft.dias || []; go('editor'); },
   cancelarEditor: () => { ui.draft = null; go('rutinas'); },
   toggleDia: el => { const i = +el.dataset.i, d = ui.draft.dias; const k = d.indexOf(i); k === -1 ? d.push(i) : d.splice(k, 1); render(); },
-  mover: el => { const i = +el.dataset.i, j = i + (+el.dataset.d), it = ui.draft.items; if (j < 0 || j >= it.length) return; [it[i], it[j]] = [it[j], it[i]]; render(); },
-  quitarItem: el => { ui.draft.items.splice(+el.dataset.i, 1); render(); },
+  mover: el => { const i = +el.dataset.i, j = i + (+el.dataset.d), it = ui.draft.items; if (j < 0 || j >= it.length) return; it[i].grupo = null; [it[i], it[j]] = [it[j], it[i]]; normalizarGrupos(it); render(); },
+  quitarItem: el => { ui.draft.items.splice(+el.dataset.i, 1); normalizarGrupos(ui.draft.items); render(); },
+  unir: el => { const it = ui.draft.items, i = +el.dataset.i, a = it[i], b = it[i+1]; const g = a.grupo || b.grupo || uid(); const old = b.grupo; if (old && old !== g) it.forEach(x => { if (x.grupo === old) x.grupo = g; }); a.grupo = g; b.grupo = g; normalizarGrupos(it); render(); },
+  separar: el => { const it = ui.draft.items, i = +el.dataset.i, [st, en] = bloqueDe(it, i); const ng = uid(); for (let k = i + 1; k <= en; k++) it[k].grupo = ng; normalizarGrupos(it); render(); },
   abrirPicker: () => { ui.picker = { q: '', nombre: '', grupo: 'Pecho' }; renderLayer(); },
   cerrarPicker: () => { ui.picker = null; renderLayer(); },
-  elegirEj: el => { ui.draft.items.push({ ejId: el.dataset.id, series: 3, repsMin: 8, repsMax: 12, descanso: 90 }); ui.picker = null; render(); },
-  crearEj: () => { const n = (ui.picker.nombre || '').trim(); if (!n) { toast('Escribe el nombre del ejercicio.'); return; } const e = { id: uid(), nombre: n, grupo: ui.picker.grupo || 'Pecho' }; S.ejercicios.push(e); saveConfig(); ui.draft.items.push({ ejId: e.id, series: 3, repsMin: 8, repsMax: 12, descanso: 90 }); ui.picker = null; render(); },
+  elegirEj: el => { if (ui.picker && ui.picker.modo === 'bis') { ui.picker = null; unirBiserie(null, el.dataset.id); return; } ui.draft.items.push({ ejId: el.dataset.id, series: 3, repsMin: 8, repsMax: 12, descanso: 90 }); ui.picker = null; render(); },
+  crearEj: () => { const n = (ui.picker.nombre || '').trim(); if (!n) { toast('Escribe el nombre del ejercicio.'); return; } const e = { id: uid(), nombre: n, grupo: ui.picker.grupo || 'Pecho' }; S.ejercicios.push(e); saveConfig(); if (ui.picker.modo === 'bis') { ui.picker = null; unirBiserie(null, e.id); return; } ui.draft.items.push({ ejId: e.id, series: 3, repsMin: 8, repsMax: 12, descanso: 90 }); ui.picker = null; render(); },
   guardarRutina: () => {
     const d = ui.draft; d.nombre = (d.nombre || '').trim();
     if (!d.nombre) { toast('Ponle un nombre a la rutina.'); return; }
     if (!d.items.length) { toast('Añade al menos un ejercicio.'); return; }
+    normalizarGrupos(d.items);
     d.items.forEach(it => { it.series = Math.max(1, parseInt(it.series) || 3); it.repsMin = Math.max(1, parseInt(it.repsMin) || 8); it.repsMax = Math.max(it.repsMin, parseInt(it.repsMax) || it.repsMin); it.descanso = +it.descanso || 90; });
     const isNew = d.isNew; delete d.isNew;
     const k = S.rutinas.findIndex(r => r.id === d.id); if (k === -1) S.rutinas.push(d); else S.rutinas[k] = d;
@@ -738,15 +851,19 @@ const A = {
   },
   borrarRutina: () => confirmar('¿Borrar rutina?', 'Se borra la rutina, pero tus entrenos ya hechos se mantienen.', 'Borrar', () => { S.rutinas = S.rutinas.filter(r => r.id !== ui.draft.id); saveConfig(); ui.draft = null; go('rutinas'); }),
   empezar: el => { const r = rutById(el.dataset.id); if (r && r.items.length) startEntreno(r); },
-  toggleSet: el => marcarSerie(+el.dataset.i),
+  abrirBiserie: () => { ui.sheet = { tipo: 'biserie' }; renderLayer(); },
+  biserieOtro: () => { ui.sheet = null; ui.picker = { q: '', nombre: '', grupo: 'Pecho', modo: 'bis' }; renderLayer(); },
+  unirEntreno: el => { ui.sheet = null; unirBiserie(+el.dataset.j, null); },
+  deshacerBiserie: () => { const a = S.activo; miembros(a).forEach(i => { const ex = a.ejercicios[i]; ex.grupo = null; ex.series = ex.series.filter(z => !z.skip); if (!ex.series.length) ex.series.push({ kg: '', reps: '', done: false, descanso: null, sugKg: '', sugReps: '', prev: '' }); }); saveActivo(); render(); },
+  toggleSet: el => marcarSerie(+el.dataset.e, +el.dataset.i),
   addSet: () => { addSerie(); saveActivo(); render(); },
   otraSerieDesc: () => { finDescanso(); addSerie(); saveActivo(); render(); },
   sigEjDesc: () => { finDescanso(); siguienteEj(); },
-  delSet: () => { const ex = S.activo.ejercicios[S.activo.idx]; if (ex.series.length > 1) { ex.series.pop(); saveActivo(); render(); } },
-  exNav: el => { const a = S.activo, j = a.idx + (+el.dataset.d); if (j < 0 || j >= a.ejercicios.length) return; a.idx = j; saveActivo(); render(); window.scrollTo(0, 0); },
+  delSet: () => { const a = S.activo, m = miembros(a); if (nRondas(a, m) > 1) { m.forEach(i => { const ex = a.ejercicios[i]; if (ex.series.length > 1) ex.series.pop(); }); saveActivo(); render(); } },
+  exNav: el => { const a = S.activo, [s, e] = bloqueDe(a.ejercicios, a.idx); if (+el.dataset.d < 0) { if (s === 0) return; a.idx = bloqueDe(a.ejercicios, s - 1)[0]; } else { if (e >= a.ejercicios.length - 1) return; a.idx = e + 1; } saveActivo(); render(); window.scrollTo(0, 0); },
   hechaSiguiente: () => {
-    const a = S.activo, ex = a.ejercicios[a.idx], i = ex.series.findIndex(s => !s.done);
-    if (i !== -1) { marcarSerie(i); return; }
+    const a = S.activo, ab = celdaAbierta(a, miembros(a));
+    if (ab) { marcarSerie(ab.e, ab.r); return; }
     siguienteEj();
   },
   ajDesc: el => { const d = S.activo.descanso; d.objetivo = Math.max(5, d.objetivo + (+el.dataset.s)); if (d.objetivo - (Date.now() - d.inicio)/1000 > 0) d.avisado = false; saveActivo(true); tick(); },
@@ -799,7 +916,7 @@ document.addEventListener('input', e => {
   else if (k === 'item') ui.draft.items[+el.dataset.i][el.dataset.f] = el.value;
   else if (k === 'pickerQ') { ui.picker.q = el.value; const pos = el.selectionStart; renderLayer(); const n = document.querySelector('[data-in="pickerQ"]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
   else if (k === 'nuevoEjNombre') ui.picker.nombre = el.value;
-  else if (k === 'set') { const s = S.activo.ejercicios[S.activo.idx].series[+el.dataset.i]; s[el.dataset.f] = el.value; saveActivo(true); }
+  else if (k === 'set') { const s = S.activo.ejercicios[+el.dataset.e].series[+el.dataset.i]; s[el.dataset.f] = el.value; saveActivo(true); }
   else if (k === 'md') { const f = el.dataset.f; if (f.startsWith('p_')) ui.medidaDraft.partes[f.slice(2)] = el.value; else ui.medidaDraft[f] = el.value; }
 });
 document.addEventListener('change', e => {

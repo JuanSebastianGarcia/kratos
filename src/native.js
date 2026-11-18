@@ -66,7 +66,7 @@ const notif = {
             visibility: 1,
             vibration: true,
             lights: true,
-            lightColor: '#C6F432',
+            lightColor: '#FF6A1A',
           });
         }
       } catch (e) { this.enabled = false; }
@@ -86,7 +86,7 @@ const notif = {
           id, title, body,
           channelId: CHANNEL,
           smallIcon: 'ic_stat_kratos',
-          iconColor: '#C6F432',
+          iconColor: '#FF6A1A',
           schedule: { at: new Date(at), allowWhileIdle: true },
         }],
       });
