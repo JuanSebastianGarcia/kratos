@@ -15,6 +15,33 @@ function persist(soon){ clearTimeout(saveT); if (soon) saveT = setTimeout(writeN
 const saveConfig = () => persist();
 function saveActivo(soon){ persist(soon); syncEntreno(); }
 
+/* ----- color de acento personalizado (se guarda en perfil.acento) ----- */
+const ACC_DEF = '__ACC_DEF__'; // color original del diseño (lo pone scripts/adaptar.mjs)
+const hexOk = h => /^#[0-9a-f]{6}$/i.test(h || '');
+const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const lum = h => hexRgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0);
+const contraste = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+const acento = () => hexOk(S.perfil && S.perfil.acento) ? S.perfil.acento.toUpperCase() : ACC_DEF;
+function aplicarAcento(){
+  const h = acento(), st = document.documentElement.style;
+  st.setProperty('--acc', h);
+  st.setProperty('--acc-rgb', hexRgb(h).join(','));
+  // texto encima del color: negro o blanco, el que se lea mejor
+  st.setProperty('--acc-tx', contraste(h, '#0E0F11') >= contraste(h, '#FFFFFF') ? '#0E0F11' : '#FFFFFF');
+}
+function hslHex(h, s, l){
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+function hexHsl(hex){
+  const [r, g, b] = hexRgb(hex).map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); h = (mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60; }
+  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+}
+
 /* ----- pantalla encendida y aviso de fin de descanso ----- */
 const REST_NOTIF = 1001;
 let restSig = '', restNotif = false;
@@ -39,7 +66,7 @@ function syncEntreno(){
   if (!d) { KN.notif.cancel(REST_NOTIF); return; }
   const at = d.inicio + d.objetivo*1000;
   restNotif = KN.notif.enabled && at > Date.now() + 500;
-  KN.notif.schedule(REST_NOTIF, at, '¡Descanso terminado!', textoSiguiente(a, d));
+  KN.notif.schedule(REST_NOTIF, at, '¡Descanso terminado!', textoSiguiente(a, d), acento());
 }
 
 function applyLoaded(o){
@@ -66,6 +93,7 @@ async function boot(){
   }
   if (ensureBase()) persist();
   ordenar();
+  aplicarAcento();
   if (S.activo) ui.view = 'entreno';
   render();
   KN.notif.init(false).then(() => { restSig = ''; syncEntreno(); });
@@ -117,7 +145,7 @@ function importarTexto(txt){
   const lista = Object.keys(r).map(k => k === 'perfil' ? 'perfil' : r[k].length + ' ' + NOMBRES[k]).join(', ');
   confirmar('¿Importar datos?', 'Se van a reemplazar: ' + lista + '. Lo que no venga en el archivo se mantiene. Te recomendamos exportar una copia antes.', 'Importar', () => {
     Object.keys(r).forEach(k => { S[k] = r[k]; });
-    ensureBase(); ordenar(); persist();
+    ensureBase(); ordenar(); aplicarAcento(); persist();
     toast('Datos importados.'); render();
   });
 }

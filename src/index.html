@@ -10,7 +10,7 @@
 <style>
 :root{
   --bg:#0E0F11;--s1:#17191C;--s2:#202328;--line:#2A2E34;--line2:#3A3F46;
-  --tx:#F2F3F5;--tx2:#C9CDD2;--mut:#9BA1A9;--acc:#FF6A1A;--acc-tx:#0E0F11;
+  --tx:#F2F3F5;--tx2:#C9CDD2;--mut:#9BA1A9;--acc:#FF6A1A;--acc-rgb:255,106,26;--acc-tx:#0E0F11;
   --warn:#FFC24B;--bad:#FF6B6B;--ok:#7BD88F;--nav:#121316;
   color-scheme:dark;
   box-sizing:border-box;
@@ -78,7 +78,7 @@ nav.tabs button.on{color:var(--acc);font-weight:600}
 .sets{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:8px 10px 12px;display:flex;flex-direction:column;gap:6px}
 .srow{display:grid;grid-template-columns:34px minmax(0,1fr) 70px 60px 44px;gap:8px;align-items:center;padding:6px 2px;border-radius:12px}
 .srow.head{font-size:11px;font-weight:600;color:var(--mut)}
-.srow.done{background:rgba(255,106,26,.10)}
+.srow.done{background:rgba(var(--acc-rgb),.10)}
 .srow.cur{background:var(--s2)}
 .sin{height:40px;width:100%;border-radius:10px;text-align:center;font-size:16px;font-weight:700;outline:none;color:var(--tx);background:var(--bg);border:1.5px solid var(--line2)}
 .sin:focus{border-color:var(--acc)}
@@ -95,7 +95,7 @@ nav.tabs button.on{color:var(--acc);font-weight:600}
 .seg button{border:0;border-radius:9px;background:transparent;color:var(--mut);font-weight:600;font-size:13px}
 .seg button.on{background:var(--line);color:var(--tx);font-weight:700}
 .goal{min-height:108px;border-radius:18px;padding:14px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:10px;text-align:left;background:var(--s1);border:1px solid var(--line)}
-.goal.on{background:rgba(255,106,26,.10);border:1.5px solid var(--acc)}
+.goal.on{background:rgba(var(--acc-rgb),.10);border:1.5px solid var(--acc)}
 .sw{width:44px;height:26px;border-radius:13px;background:var(--line2);position:relative;flex-shrink:0;border:0}
 .sw::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:10px;background:var(--tx2);transition:transform .15s}
 .sw.on{background:var(--acc)}.sw.on::after{transform:translateX(18px);background:var(--acc-tx)}
@@ -110,6 +110,12 @@ nav.tabs button.on{color:var(--acc);font-weight:600}
 .loading{display:flex;align-items:center;justify-content:center;min-height:60vh;color:var(--mut)}
 input[type=date]{color-scheme:dark}
 @media (prefers-reduced-motion: no-preference){.sw::after{transition:transform .15s}}
+/* selector de color (Ajustes) */
+.accs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.accs button{aspect-ratio:1;border-radius:12px;border:2px solid transparent;padding:0}
+.accs button.on{border-color:var(--tx);box-shadow:inset 0 0 0 3px var(--s1)}
+input.rng{-webkit-appearance:none;appearance:none;width:100%;height:26px;border-radius:13px;outline:none;margin:0;background:var(--s2)}
+input.rng::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:15px;background:#fff;border:3px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.6)}
 </style>
 </head>
 <body>
@@ -197,6 +203,33 @@ function persist(soon){ clearTimeout(saveT); if (soon) saveT = setTimeout(writeN
 const saveConfig = () => persist();
 function saveActivo(soon){ persist(soon); syncEntreno(); }
 
+/* ----- color de acento personalizado (se guarda en perfil.acento) ----- */
+const ACC_DEF = '#FF6A1A'; // color original del diseño (lo pone scripts/adaptar.mjs)
+const hexOk = h => /^#[0-9a-f]{6}$/i.test(h || '');
+const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const lum = h => hexRgb(h).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0);
+const contraste = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+const acento = () => hexOk(S.perfil && S.perfil.acento) ? S.perfil.acento.toUpperCase() : ACC_DEF;
+function aplicarAcento(){
+  const h = acento(), st = document.documentElement.style;
+  st.setProperty('--acc', h);
+  st.setProperty('--acc-rgb', hexRgb(h).join(','));
+  // texto encima del color: negro o blanco, el que se lea mejor
+  st.setProperty('--acc-tx', contraste(h, '#0E0F11') >= contraste(h, '#FFFFFF') ? '#0E0F11' : '#FFFFFF');
+}
+function hslHex(h, s, l){
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+function hexHsl(hex){
+  const [r, g, b] = hexRgb(hex).map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); h = (mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60; }
+  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+}
+
 /* ----- pantalla encendida y aviso de fin de descanso ----- */
 const REST_NOTIF = 1001;
 let restSig = '', restNotif = false;
@@ -221,7 +254,7 @@ function syncEntreno(){
   if (!d) { KN.notif.cancel(REST_NOTIF); return; }
   const at = d.inicio + d.objetivo*1000;
   restNotif = KN.notif.enabled && at > Date.now() + 500;
-  KN.notif.schedule(REST_NOTIF, at, '¡Descanso terminado!', textoSiguiente(a, d));
+  KN.notif.schedule(REST_NOTIF, at, '¡Descanso terminado!', textoSiguiente(a, d), acento());
 }
 
 function applyLoaded(o){
@@ -248,6 +281,7 @@ async function boot(){
   }
   if (ensureBase()) persist();
   ordenar();
+  aplicarAcento();
   if (S.activo) ui.view = 'entreno';
   render();
   KN.notif.init(false).then(() => { restSig = ''; syncEntreno(); });
@@ -299,7 +333,7 @@ function importarTexto(txt){
   const lista = Object.keys(r).map(k => k === 'perfil' ? 'perfil' : r[k].length + ' ' + NOMBRES[k]).join(', ');
   confirmar('¿Importar datos?', 'Se van a reemplazar: ' + lista + '. Lo que no venga en el archivo se mantiene. Te recomendamos exportar una copia antes.', 'Importar', () => {
     Object.keys(r).forEach(k => { S[k] = r[k]; });
-    ensureBase(); ordenar(); persist();
+    ensureBase(); ordenar(); aplicarAcento(); persist();
     toast('Datos importados.'); render();
   });
 }
@@ -453,7 +487,7 @@ function vEditor(){
     const serieCampo = esPrimero ? '<label class="col" style="gap:4px"><span class="lbl">' + (enG ? 'Rondas' : 'Series') + '</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="series" value="' + esc(it.series) + '"></label>' : '';
     const descCampo = esUltimo ? '<label class="col" style="gap:4px;flex:1;min-width:110px"><span class="lbl">' + (enG ? 'Descanso tras la ronda' : 'Descanso') + '</span><select class="field" style="height:40px;font-size:15px;border-radius:10px" data-ch="item" data-i="' + i + '" data-f="descanso">' + desc.map(x => '<option value="' + x + '"' + (+it.descanso === x ? ' selected' : '') + '>' + mmss(x) + '</option>').join('') + '</select></label>' : '';
     const top = enG && esPrimero ? '<div class="row" style="gap:8px"><span class="tag acc">Biserie</span><span class="mut" style="font-size:12px">Se hacen seguidos, sin descanso entre ellos</span></div>' : '';
-    items += '<div class="card' + (enG ? ' hi' : '') + '" style="padding:12px 12px 14px;gap:10px' + (enG ? ';background:rgba(255,106,26,.06)' : '') + '">' + top + '<div class="row"><span class="num"' + (enG ? ' style="background:var(--acc);color:var(--acc-tx)"' : '') + '>' + (enG ? letra : (i+1)) + '</span><span style="flex:1;font-weight:600">' + esc(ejName(it.ejId)) + '</span><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="-1" aria-label="Subir"' + (i === 0 ? ' disabled' : '') + '>' + I.up + '</button><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="1" aria-label="Bajar"' + (i === d.items.length - 1 ? ' disabled' : '') + '>' + I.dn + '</button><button class="ico" style="width:36px;height:36px;color:var(--mut)" data-a="quitarItem" data-i="' + i + '" aria-label="Quitar">' + I.x + '</button></div>' +
+    items += '<div class="card' + (enG ? ' hi' : '') + '" style="padding:12px 12px 14px;gap:10px' + (enG ? ';background:rgba(var(--acc-rgb),.06)' : '') + '">' + top + '<div class="row"><span class="num"' + (enG ? ' style="background:var(--acc);color:var(--acc-tx)"' : '') + '>' + (enG ? letra : (i+1)) + '</span><span style="flex:1;font-weight:600">' + esc(ejName(it.ejId)) + '</span><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="-1" aria-label="Subir"' + (i === 0 ? ' disabled' : '') + '>' + I.up + '</button><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="1" aria-label="Bajar"' + (i === d.items.length - 1 ? ' disabled' : '') + '>' + I.dn + '</button><button class="ico" style="width:36px;height:36px;color:var(--mut)" data-a="quitarItem" data-i="' + i + '" aria-label="Quitar">' + I.x + '</button></div>' +
       '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">' + serieCampo + '<label class="col" style="gap:4px"><span class="lbl">Reps mín.</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="repsMin" value="' + esc(it.repsMin) + '"></label><label class="col" style="gap:4px"><span class="lbl">Reps máx.</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="repsMax" value="' + esc(it.repsMax) + '"></label>' + descCampo + (esUltimo ? '' : '<span class="mut" style="font-size:12px;padding-bottom:10px">Sin descanso, sigue ' + String.fromCharCode(66 + i - st) + '</span>') + '</div></div>';
     if (i < d.items.length - 1) {
       const unido = enG && d.items[i+1].grupo === it.grupo;
@@ -531,7 +565,7 @@ function vEntreno(){
     for (let r = 0; r < R; r++) {
       const cur = abierta && abierta.r === r, done = m.every(i => { const s = a.ejercicios[i].series[r]; return !s || s.done; });
       const ultD = (a.ejercicios[m[m.length - 1]].series[r] || {}).descanso;
-      cuerpo += '<div class="sets" style="' + (cur ? 'border:1.5px solid var(--acc)' : (done ? 'background:rgba(255,106,26,.07);border-color:transparent' : '')) + '"><div class="row between" style="padding:4px 2px 0"><span style="font-size:13px;font-weight:700' + (cur ? ';color:var(--acc)' : '') + '">Ronda ' + (r + 1) + '</span><span class="mut" style="font-size:12px">' + (cur ? 'Ahora: ' + L(abierta.e) : (done && ultD != null ? 'descansaste ' + mmss(ultD) : '')) + '</span></div>' +
+      cuerpo += '<div class="sets" style="' + (cur ? 'border:1.5px solid var(--acc)' : (done ? 'background:rgba(var(--acc-rgb),.07);border-color:transparent' : '')) + '"><div class="row between" style="padding:4px 2px 0"><span style="font-size:13px;font-weight:700' + (cur ? ';color:var(--acc)' : '') + '">Ronda ' + (r + 1) + '</span><span class="mut" style="font-size:12px">' + (cur ? 'Ahora: ' + L(abierta.e) : (done && ultD != null ? 'descansaste ' + mmss(ultD) : '')) + '</span></div>' +
         m.map(i => { const s = a.ejercicios[i].series[r]; if (!s) return ''; if (s.skip) return '<div class="srow"><span class="num" style="width:30px;height:26px;font-size:12px">' + L(i) + '</span><span class="mut" style="font-size:12px;grid-column:span 4">Aún no estaba en la biserie</span></div>'; return '<div class="srow' + (s.done ? ' done' : (abierta && abierta.e === i && abierta.r === r ? ' cur' : '')) + '"><span class="num" style="width:30px;height:26px;font-size:12px">' + L(i) + '</span><span class="mut" style="font-size:12px">' + (s.prev || '—') + '</span>' + inputsSerie(i, r, s) + '</div>'; }).join('') + '</div>';
     }
     cuerpo += '<div class="sets" style="padding:10px">' + botonesSerie(R > 1, 'ronda') + '</div>';
@@ -671,7 +705,7 @@ function lineSvg(pts, label){
   const X = i => 8 + i * (W - 40) / (pts.length - 1), Y = v => 12 + (H - 34) * (1 - (v - lo)/(hi - lo));
   const poly = pts.map((p, i) => X(i).toFixed(1) + ',' + Y(p.y).toFixed(1)).join(' ');
   const l = pts.length - 1;
-  return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '"><line x1="0" y1="' + Y(mx) + '" x2="' + W + '" y2="' + Y(mx) + '" stroke="#22252A"/><line x1="0" y1="' + Y(mn) + '" x2="' + W + '" y2="' + Y(mn) + '" stroke="#22252A"/><text x="' + (W-2) + '" y="' + (Y(mx) - 4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + fmt(mx) + '</text><text x="' + (W-2) + '" y="' + (Y(mn) - 4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + fmt(mn) + '</text><polyline points="' + poly + '" fill="none" stroke="#FF6A1A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="' + X(l) + '" cy="' + Y(pts[l].y) + '" r="5" fill="#FF6A1A"/><text x="8" y="' + (H-4) + '" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + esc(pts[0].x) + '</text><text x="' + X(l) + '" y="' + (H-4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + esc(pts[l].x) + '</text></svg>';
+  return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '"><line x1="0" y1="' + Y(mx) + '" x2="' + W + '" y2="' + Y(mx) + '" stroke="#22252A"/><line x1="0" y1="' + Y(mn) + '" x2="' + W + '" y2="' + Y(mn) + '" stroke="#22252A"/><text x="' + (W-2) + '" y="' + (Y(mx) - 4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + fmt(mx) + '</text><text x="' + (W-2) + '" y="' + (Y(mn) - 4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + fmt(mn) + '</text><polyline points="' + poly + '" fill="none" stroke="var(--acc)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="' + X(l) + '" cy="' + Y(pts[l].y) + '" r="5" fill="var(--acc)"/><text x="8" y="' + (H-4) + '" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + esc(pts[0].x) + '</text><text x="' + X(l) + '" y="' + (H-4) + '" text-anchor="end" fill="#9BA1A9" font-size="10" font-family="Inter,sans-serif">' + esc(pts[l].x) + '</text></svg>';
 }
 function vStats(){
   const pers = [[4,'4 sem'],[8,'2 meses'],[26,'6 meses'],[0,'Todo']];
@@ -786,6 +820,7 @@ function enviarChat(){ trabajando(); }
 let appVersion = '';
 function vAjustes(){
   if (!appVersion) KN.version().then(v => { appVersion = v; if (ui.view === 'ajustes') render(); });
+  setTimeout(refrescarColor, 0);
   const n = (x, t) => '<div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">' + t + '</span><b>' + x + '</b></div>';
   const notifTxt = !KN.isNative ? 'Solo disponible en la app de Android.' : KN.notif.enabled ? 'Activados: suena y vibra al terminar el descanso, aunque la app esté en segundo plano.' : 'Desactivados. Actívalos para que el celular suene y vibre al terminar cada descanso.';
   return '<div class="row between" style="margin:-12px -8px 0"><button class="ico" data-a="go" data-v="inicio" aria-label="Volver">' + I.back + '</button><span style="font-weight:600">Ajustes</span><span style="width:44px"></span></div>' +
@@ -793,9 +828,57 @@ function vAjustes(){
     '<div class="grid3">' + n(S.rutinas.length, 'Rutinas') + n(S.sesiones.length, 'Entrenos') + n(S.medidas.length, 'Medidas') + '</div>' +
     '<button class="btn" data-a="exportar">' + I.download + 'Exportar datos</button><button class="btn ghost" data-a="importar">' + I.upload + 'Importar datos</button>' +
     '<span class="note">El archivo es un JSON con: ejercicios, rutinas, perfil, sesiones, medidas y analisis. Al importar se reemplaza lo que venga en el archivo.</span></div></div>' +
+    vColor() +
     '<div class="col"><span class="sec">Avisos de descanso</span><div class="card"><span class="tx2" style="font-size:14px;line-height:1.45">' + notifTxt + '</span>' + (KN.isNative && !KN.notif.enabled ? '<button class="btn soft" style="color:var(--tx)" data-a="activarAvisos">Activar avisos</button>' : '') + '<span class="note">Durante un entreno la pantalla se mantiene encendida.</span></div></div>' +
     '<p class="note" style="text-align:center;margin:8px 0 0">Kratos' + (appVersion ? ' · versión ' + esc(appVersion) : '') + '</p>';
 }
+
+/* ----- Color de la app: el usuario elige el acento (negros y grises no cambian) ----- */
+const PRESETS = [['Naranja','#FF6A1A'],['Lima','#C6F432'],['Verde','#34D399'],['Turquesa','#2DD4BF'],['Cian','#22D3EE'],['Azul','#3B82F6'],['Índigo','#6366F1'],['Morado','#A855F7'],['Rosa','#EC4899'],['Rojo','#EF4444'],['Ámbar','#F59E0B'],['Amarillo','#FACC15']];
+function vColor(){
+  const h = acento(), [H, Sa, L] = hexHsl(h);
+  const pres = PRESETS.some(p => p[1] === ACC_DEF.toUpperCase()) ? PRESETS : [['Original', ACC_DEF]].concat(PRESETS.slice(0, 11));
+  const slider = (id, label, min, max, v) => '<label class="col" style="gap:6px"><span class="row between"><span class="lbl" style="font-size:12px">' + label + '</span><span class="mut" style="font-size:12px" id="' + id + 'V"></span></span><input type="range" class="rng" id="' + id + '" data-acc-in="hsl" min="' + min + '" max="' + max + '" value="' + v + '" aria-label="' + label + '"></label>';
+  return '<div class="col"><span class="sec">Color de la app</span><div class="card">' +
+    '<div class="row" style="gap:12px"><span style="width:48px;height:48px;border-radius:14px;background:var(--acc);flex-shrink:0"></span><div class="col" style="gap:2px;flex:1"><span class="disp" style="font-size:18px" id="accTxt">' + h + '</span><span class="mut" style="font-size:12px">Botones, resaltados, gráficas y avisos</span></div></div>' +
+    '<div class="accs">' + pres.map(([n, c]) => '<button data-acc="' + c + '" aria-label="' + n + '" title="' + n + '" style="background:' + c + '"></button>').join('') + '</div>' +
+    '<span class="sec" style="margin-top:4px">O elige cualquier color</span>' +
+    slider('accH', 'Tono', 0, 360, H) + slider('accS', 'Intensidad', 0, 100, Sa) + slider('accL', 'Brillo', 5, 95, Math.min(95, Math.max(5, L))) +
+    '<label class="row field" style="gap:10px"><span class="mut" style="font-size:14px">Código</span><input id="accHex" data-acc-in="hex" value="' + h + '" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Código del color" style="flex:1;min-width:0;background:transparent;border:0;outline:none;text-align:right;font-weight:700;color:var(--tx);font-family:inherit"></label>' +
+    '<span class="note" id="accWarn" style="color:var(--warn)" role="status"></span>' +
+    '<button class="btn soft" style="color:var(--tx)" data-acc="reset">Restablecer color original</button></div></div>';
+}
+// Actualiza el selector sin volver a dibujar la pantalla (para que el deslizador no se corte al arrastrar).
+function refrescarColor(origen){
+  const g = id => document.getElementById(id);
+  if (!g('accH')) return;
+  const h = acento();
+  if (origen !== 'hsl') { const [H, Sa, L] = hexHsl(h); g('accH').value = H; g('accS').value = Sa; g('accL').value = L; }
+  const hv = +g('accH').value, sv = +g('accS').value, lv = +g('accL').value;
+  g('accHV').textContent = hv + '°'; g('accSV').textContent = sv + '%'; g('accLV').textContent = lv + '%';
+  g('accH').style.background = 'linear-gradient(to right,' + [0, 60, 120, 180, 240, 300, 360].map(x => 'hsl(' + x + ',90%,55%)').join(',') + ')';
+  g('accS').style.background = 'linear-gradient(to right,hsl(' + hv + ',0%,' + lv + '%),hsl(' + hv + ',100%,' + lv + '%))';
+  g('accL').style.background = 'linear-gradient(to right,hsl(' + hv + ',' + sv + '%,5%),hsl(' + hv + ',' + sv + '%,50%),hsl(' + hv + ',' + sv + '%,95%))';
+  g('accTxt').textContent = h;
+  if (origen !== 'hex') g('accHex').value = h;
+  document.querySelectorAll('[data-acc]').forEach(b => b.classList.toggle('on', b.dataset.acc.toUpperCase() === h));
+  g('accWarn').textContent = contraste(h, '#0E0F11') < 3 ? 'Este color se ve poco sobre el fondo oscuro. Prueba uno más brillante.' : '';
+}
+function ponerAcento(h, origen){
+  h = h.toUpperCase();
+  S.perfil.acento = h === ACC_DEF.toUpperCase() ? null : h;
+  aplicarAcento(); persist(true); refrescarColor(origen);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-acc]'); if (!b) return;
+  ponerAcento(b.dataset.acc === 'reset' ? ACC_DEF : b.dataset.acc, 'btn');
+});
+document.addEventListener('input', e => {
+  const k = e.target.dataset && e.target.dataset.accIn; if (!k) return;
+  const g = id => +document.getElementById(id).value;
+  if (k === 'hsl') ponerAcento(hslHex(g('accH'), g('accS'), g('accL')), 'hsl');
+  else { let v = e.target.value.trim(); if (v[0] !== '#') v = '#' + v; if (hexOk(v)) ponerAcento(v, 'hex'); }
+});
 
 /* ----- hojas (sheets) ----- */
 function vSheet(){

@@ -74,7 +74,7 @@ const notif = {
     })();
     return this.ready;
   },
-  async schedule(id, at, title, body) {
+  async schedule(id, at, title, body, color) {
     if (!isNative) return;
     await this.init(false);
     if (!this.enabled) return;
@@ -86,7 +86,7 @@ const notif = {
           id, title, body,
           channelId: CHANNEL,
           smallIcon: 'ic_stat_kratos',
-          iconColor: '#FF6A1A',
+          iconColor: color || '#FF6A1A',
           schedule: { at: new Date(at), allowWhileIdle: true },
         }],
       });

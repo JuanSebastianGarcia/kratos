@@ -1,6 +1,7 @@
 # Kratos
 
 App de entrenamiento para Android (Capacitor). Tema oscuro, acento naranja `#FF6A1A`. Incluye biseries (dos ejercicios seguidos sin descanso).
+El color de acento se puede cambiar en Ajustes → Color de la app (se guarda en `perfil.acento`).
 
 ## Descargar
 

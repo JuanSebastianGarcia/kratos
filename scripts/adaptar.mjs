@@ -15,7 +15,25 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const src = process.argv[2];
 if (!src) { console.error('Uso: npm run adaptar -- "archivo-del-artifact.html"'); process.exit(1); }
 let s = readFileSync(src, 'utf8').replace(/\r\n/g, '\n');
-const bloque = f => readFileSync(new URL('./artifact/' + f, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+
+// 0. Color de acento personalizable: todo lo que use el color fijo del diseño pasa a var(--acc) / var(--acc-rgb).
+//    Se hace antes de insertar los bloques para no tocar la lista de colores predefinidos.
+const accDef = /--acc:\s*(#[0-9A-Fa-f]{6})\s*;/.exec(s);
+if (!accDef) throw new Error('No encontré la variable --acc en el CSS del artifact.');
+const ACC = accDef[1].toUpperCase();
+const [ar, ag, ab] = [1, 3, 5].map(i => parseInt(ACC.slice(i, i + 2), 16));
+s = s.replace(accDef[0], '@@ACC_DEF@@');
+s = s.replace(new RegExp(ACC, 'gi'), 'var(--acc)');
+s = s.replace(new RegExp(`rgba\\(\\s*${ar}\\s*,\\s*${ag}\\s*,\\s*${ab}\\s*,`, 'g'), 'rgba(var(--acc-rgb),');
+s = s.replace('@@ACC_DEF@@', `--acc:${ACC};--acc-rgb:${ar},${ag},${ab};`);
+s = s.replace('</style>', `/* selector de color (Ajustes) */
+.accs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.accs button{aspect-ratio:1;border-radius:12px;border:2px solid transparent;padding:0}
+.accs button.on{border-color:var(--tx);box-shadow:inset 0 0 0 3px var(--s1)}
+input.rng{-webkit-appearance:none;appearance:none;width:100%;height:26px;border-radius:13px;outline:none;margin:0;background:var(--s2)}
+input.rng::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:15px;background:#fff;border:3px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.6)}
+</style>`);
+const bloque = f => readFileSync(new URL('./artifact/' + f, import.meta.url), 'utf8').replace(/\r\n/g, '\n').replace(/__ACC_DEF__/g, ACC);
 
 function rep(old, nuevo, desc) {
   const n = s.split(old).length - 1;
