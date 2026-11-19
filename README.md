@@ -3,6 +3,15 @@
 App de entrenamiento para Android (Capacitor). Tema oscuro, acento naranja `#FF6A1A`. Incluye biseries (dos ejercicios seguidos sin descanso).
 El color de acento se puede cambiar en Ajustes → Color de la app (se guarda en `perfil.acento`).
 
+- **Rutinas:** solo definen ejercicios, orden, biseries, si el ejercicio es unilateral y el descanso
+  (con tiempo y alarma, o libre). Las series, pesos y repeticiones se anotan al entrenar.
+- **Antes de empezar** se confirma el orden de los ejercicios (se puede cambiar solo para ese día).
+- **En el entreno:** kg o lb por ejercicio, unilaterales con izquierdo y derecho por separado,
+  series en pirámide (varios pesos en una misma serie) y opción de cancelar o reiniciar el entreno.
+- Las sesiones siempre se guardan en kg. Una serie guardada es `{ kg, reps, descanso, pasos? }`:
+  `kg`/`reps` son el mejor peso de la serie y `pasos` solo existe en pirámides o unilaterales
+  (`{ I: {kg, reps}, D: {kg, reps} }`).
+
 ## Descargar
 
 Última versión del APK (enlace fijo):

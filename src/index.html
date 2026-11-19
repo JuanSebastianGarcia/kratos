@@ -83,6 +83,16 @@ nav.tabs button.on{color:var(--acc);font-weight:600}
 .sin{height:40px;width:100%;border-radius:10px;text-align:center;font-size:16px;font-weight:700;outline:none;color:var(--tx);background:var(--bg);border:1.5px solid var(--line2)}
 .sin:focus{border-color:var(--acc)}
 .srow.done .sin{background:transparent;border-color:transparent}
+/* una serie = bloque de filas (pirámide: varios pesos; unilateral: izquierdo y derecho) */
+.sblk{border-radius:12px;display:flex;flex-direction:column}
+.sblk.done{background:rgba(var(--acc-rgb),.10)}
+.sblk.cur{background:var(--s2)}
+.sblk.done .sin{background:transparent;border-color:transparent}
+.sblk .srow{padding:4px 2px}
+.ptag{font-size:10px;font-weight:700;color:var(--acc);letter-spacing:.2px}
+.useg{display:inline-grid;grid-template-columns:1fr 1fr;height:32px;padding:3px;gap:3px;border-radius:10px;background:var(--s2);flex-shrink:0}
+.useg button{border:0;border-radius:7px;background:transparent;color:var(--mut);font-weight:700;font-size:12px;padding:0 10px}
+.useg button.on{background:var(--acc);color:var(--acc-tx)}
 .chk{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:transparent;color:#5E646C;border:1.5px solid var(--line2)}
 .chk.on{background:var(--acc);color:var(--acc-tx);border-color:var(--acc)}
 .prog{display:flex;gap:4px}.prog span{flex:1;height:4px;border-radius:2px;background:var(--line)}
@@ -231,8 +241,9 @@ function hexHsl(hex){
 }
 
 /* ----- pantalla encendida y aviso de fin de descanso ----- */
-const REST_NOTIF = 1001;
-let restSig = '', restNotif = false;
+// Se programan 3 avisos seguidos (cada 5 s) para que suene como alarma aunque el celular esté bloqueado.
+const REST_IDS = [1001, 1002, 1003];
+let restSig = '';
 function textoSiguiente(a, d){
   const ex = a.ejercicios[d.ex]; if (!ex) return 'Toca para continuar.';
   if (typeof miembros === 'function' && typeof celdaAbierta === 'function') {
@@ -250,18 +261,33 @@ function syncEntreno(){
   const sig = d ? d.inicio + ':' + d.objetivo : '';
   if (sig === restSig) return;
   restSig = sig;
-  restNotif = false;
-  if (!d) { KN.notif.cancel(REST_NOTIF); return; }
-  const at = d.inicio + d.objetivo*1000;
-  restNotif = KN.notif.enabled && at > Date.now() + 500;
-  KN.notif.schedule(REST_NOTIF, at, '¡Descanso terminado!', textoSiguiente(a, d), acento());
+  // descanso libre (objetivo 0): no hay hora de fin, no se programa aviso
+  if (!d || !d.objetivo) { cancelarAvisos(); return; }
+  const at = d.inicio + d.objetivo*1000, txt = textoSiguiente(a, d);
+  REST_IDS.forEach((id, k) => KN.notif.schedule(id, at + k*5000, k ? '¡Se acabó el descanso!' : '¡Descanso terminado!', txt, acento()));
 }
+function cancelarAvisos(){ REST_IDS.forEach(id => KN.notif.cancel(id)); }
 
 function applyLoaded(o){
   if (!o) return;
   ['ejercicios','rutinas','sesiones','medidas','analisis'].forEach(k => { if (Array.isArray(o[k])) S[k] = o[k]; });
   if (o.perfil) S.perfil = o.perfil;
   S.activo = o.activo || null;
+}
+// Un entreno en curso guardado por una versión anterior tenía kg/reps sueltos en cada serie: se pasan a "pasos".
+function migrarActivo(){
+  const a = S.activo; if (!a || !Array.isArray(a.ejercicios)) return;
+  const v = x => x == null ? '' : x;
+  a.ejercicios.forEach(ex => {
+    if (ex.unidad !== 'lb') ex.unidad = 'kg';
+    ex.uni = !!ex.uni;
+    if (ex.descanso == null) ex.descanso = 90;
+    (ex.series || []).forEach(s => {
+      if (Array.isArray(s.pasos)) return;
+      s.pasos = [{ kg: v(s.kg), reps: v(s.reps), sugKg: v(s.sugKg), sugReps: v(s.sugReps), hayPrev: !!s.prev }];
+      ['kg','reps','sugKg','sugReps','prev'].forEach(k => { delete s[k]; });
+    });
+  });
 }
 function ensureBase(){
   if (!S.ejercicios.length) { S.ejercicios = BASE_EJ.map(([n,g]) => ({ id: uid(), nombre: n, grupo: g })); return true; }
@@ -279,6 +305,7 @@ async function boot(){
   } catch(e) {
     ui.saveNote = 'No se pudieron leer los datos guardados en este celular.';
   }
+  migrarActivo();
   if (ensureBase()) persist();
   ordenar();
   aplicarAcento();
@@ -286,7 +313,12 @@ async function boot(){
   render();
   KN.notif.init(false).then(() => { restSig = ''; syncEntreno(); });
   KN.onPause(() => { if (saveT) writeNow(); });
-  KN.onResume(() => { tick(); });
+  KN.onResume(() => {
+    // si el descanso ya terminó, los avisos del celular ya sonaron: se quitan los que falten
+    const d = S.activo && S.activo.descanso;
+    if (d && d.objetivo && Date.now() >= d.inicio + d.objetivo*1000) { cancelarAvisos(); if (KN.notif.enabled) d.avisado = true; }
+    tick();
+  });
   KN.onBack(atras);
 }
 
@@ -310,7 +342,8 @@ function normalizar(o){
   if (o.ejercicios) r.ejercicios = o.ejercicios.filter(e => isObj(e) && e.nombre).map(e => ({ id: String(e.id || uid()), nombre: String(e.nombre), grupo: GRUPOS.includes(e.grupo) ? e.grupo : 'Otro' }));
   if (o.rutinas) r.rutinas = o.rutinas.filter(x => isObj(x) && x.nombre).map(x => {
     // "grupo" en un ítem de rutina = id de la biserie a la que pertenece
-    const items = (Array.isArray(x.items) ? x.items : []).filter(isObj).map(it => ({ ejId: String(it.ejId), series: +it.series || 3, repsMin: +it.repsMin || 8, repsMax: +it.repsMax || +it.repsMin || 12, descanso: +it.descanso || 90, grupo: it.grupo ? String(it.grupo) : null }));
+    // descanso 0 = libre (cronómetro sin límite); series, pesos y repes se deciden al entrenar
+    const items = (Array.isArray(x.items) ? x.items : []).filter(isObj).map(it => ({ ejId: String(it.ejId), descanso: +it.descanso === 0 && it.descanso !== '' && it.descanso != null ? 0 : (+it.descanso || 90), unilateral: !!it.unilateral, grupo: it.grupo ? String(it.grupo) : null }));
     if (typeof normalizarGrupos === 'function') normalizarGrupos(items);
     return { id: String(x.id || uid()), nombre: String(x.nombre), dias: Array.isArray(x.dias) ? x.dias.map(Number).filter(d => d >= 0 && d <= 6) : [], items };
   });
@@ -318,7 +351,12 @@ function normalizar(o){
   if (o.sesiones) r.sesiones = o.sesiones.filter(s => isObj(s) && Array.isArray(s.ejercicios) && !isNaN(toMs(s.inicio))).map(s => {
     const ini = toMs(s.inicio), fin = toMs(s.fin);
     return Object.assign({}, s, { id: String(s.id || uid()), nombre: String(s.nombre || 'Entreno'), inicio: ini, fin: isNaN(fin) ? ini : fin,
-      ejercicios: s.ejercicios.filter(e => isObj(e) && Array.isArray(e.series)).map(e => Object.assign({}, e, { ejId: String(e.ejId), grupo: e.grupo ? String(e.grupo) : null, series: e.series.filter(isObj).map(z => ({ kg: num(z.kg) || 0, reps: num(z.reps) || 0, descanso: z.descanso == null ? null : +z.descanso })) })) });
+      ejercicios: s.ejercicios.filter(e => isObj(e) && Array.isArray(e.series)).map(e => Object.assign({}, e, { ejId: String(e.ejId), grupo: e.grupo ? String(e.grupo) : null, series: e.series.filter(isObj).map(z => {
+        const o = { kg: num(z.kg) || 0, reps: num(z.reps) || 0, descanso: z.descanso == null ? null : +z.descanso };
+        const cel = c => ({ kg: num(c && c.kg) || 0, reps: num(c && c.reps) || 0 });
+        if (Array.isArray(z.pasos) && z.pasos.length) o.pasos = z.pasos.filter(isObj).map(p => isObj(p.I) || isObj(p.D) ? { I: cel(p.I), D: cel(p.D) } : cel(p));
+        return o;
+      }) })) });
   });
   if (o.medidas) r.medidas = o.medidas.filter(m => isObj(m) && m.fecha).map(m => ({ id: String(m.id || uid()), fecha: String(m.fecha).slice(0, 10), peso: num(m.peso) || null, grasa: num(m.grasa) || null, partes: isObj(m.partes) ? m.partes : {} }));
   if (o.analisis) r.analisis = o.analisis.filter(a => isObj(a) && isObj(a.res)).map(a => Object.assign({}, a, { id: String(a.id || uid()), fecha: isNaN(toMs(a.fecha)) ? Date.now() : toMs(a.fecha), objetivos: Array.isArray(a.objetivos) ? a.objetivos : [], semanas: +a.semanas || 0, chat: Array.isArray(a.chat) ? a.chat : [],
@@ -352,6 +390,7 @@ function atras(){
   if (ui.sheet) { ui.sheet = null; renderLayer(); return; }
   const v = ui.view;
   if (v === 'editor') { ui.draft = null; go('rutinas'); return; }
+  if (v === 'previa') { const d = ui.previa ? ui.previa.desde : 'rutinas'; ui.previa = null; go(d); return; }
   const padre = { medida: 'medidas', coach: 'stats', analisis: 'coach', ajustes: 'inicio', entreno: 'inicio', rutinas: 'inicio', medidas: 'inicio', stats: 'inicio' }[v];
   if (padre) go(padre); else KN.minimize();
 }
@@ -360,12 +399,23 @@ function atras(){
 const ejById = id => S.ejercicios.find(e => e.id === id);
 const ejName = id => (ejById(id) || {}).nombre || 'Ejercicio';
 const rutById = id => S.rutinas.find(r => r.id === id);
-const volSesion = s => s.ejercicios.reduce((t, e) => t + e.series.reduce((u, x) => u + (x.kg || 0) * (x.reps || 0), 0), 0);
+/* Serie guardada: { kg, reps, descanso, pasos? }. kg/reps = el mejor peso de la serie (para récords y gráficas).
+   "pasos" solo existe en pirámides (varios pesos) o unilaterales ({ I: {kg,reps}, D: {kg,reps} }). Siempre en kg. */
+const celdasG = x => x.pasos ? x.pasos.reduce((t, p) => t.concat(p.I || p.D ? [p.I, p.D].filter(Boolean) : [p]), []) : [x];
+const volSerie = x => celdasG(x).reduce((t, c) => t + (c.kg || 0) * (c.reps || 0), 0);
+const volSesion = s => s.ejercicios.reduce((t, e) => t + e.series.reduce((u, x) => u + volSerie(x), 0), 0);
 const nSeries = s => s.ejercicios.reduce((t, e) => t + e.series.length, 0);
-function ultimaVez(ejId, exceptId){
-  for (const s of S.sesiones) { if (s.id === exceptId) continue; const e = s.ejercicios.find(x => x.ejId === ejId); if (e && e.series.length) return e.series; }
+function ultimoEj(ejId){
+  for (const s of S.sesiones) { const e = s.ejercicios.find(x => x.ejId === ejId); if (e && e.series.length) return e; }
   return null;
 }
+function ultimaVez(ejId){ const e = ultimoEj(ejId); return e ? e.series : null; }
+/* libras */
+const LB = 0.45359237;
+const aKg = (v, u) => u === 'lb' ? Math.round(v * LB * 1000) / 1000 : v;
+const deKg = (v, u) => u === 'lb' ? v / LB : v;
+const r1 = v => String(Math.round(v * 10) / 10);
+const descTxt = d => d ? mmss(d) : 'libre';
 function ultimaDeRutina(rid){ const s = S.sesiones.find(x => x.rutinaId === rid); return s ? s.inicio : null; }
 function sesionesEn(desde){ return S.sesiones.filter(s => s.inicio >= desde); }
 function racha(){
@@ -386,6 +436,7 @@ function render(){
   else if (v === 'rutinas') html = vRutinas();
   else if (v === 'editor') html = vEditor();
   else if (v === 'entreno') html = vEntreno();
+  else if (v === 'previa') html = vPrevia();
   else if (v === 'stats') html = vStats();
   else if (v === 'medidas') html = vMedidas();
   else if (v === 'medida') html = vMedida();
@@ -406,6 +457,7 @@ function renderLayer(){
   if (ui.picker) h += vPicker();
   if (ui.sheet) h += vSheet();
   if (ui.toast) h += '<div class="toast" role="status">' + esc(ui.toast) + '</div>';
+  else if (alarmaT && ui.view !== 'entreno') h += '<button class="toast" style="border:0;background:var(--warn);color:#0E0F11" data-a="pararAlarma">Descanso terminado. Detener alarma</button>';
   $layer.innerHTML = h;
 }
 let toastT = null;
@@ -437,8 +489,7 @@ function vInicio(){
     } else {
       hoy = deHoy.map(r => {
         const u = ultimaDeRutina(r.id);
-        const ser = r.items.reduce((t, i) => t + (+i.series || 0), 0);
-        return '<div class="card"><div class="row between" style="align-items:flex-start"><div class="col" style="gap:6px"><span class="sec acc">Rutina de hoy</span><span class="disp" style="font-size:24px">' + esc(r.nombre) + '</span><span class="mut" style="font-size:14px">' + esc(gruposDe(r).join(', ') || 'Sin ejercicios') + '</span></div><span class="tag">' + r.items.length + ' ejercicios</span></div><div class="row tx2" style="font-size:13px;gap:16px"><span>' + ser + ' series</span><span>' + (u ? 'Última vez: ' + relDay(u) : 'Aún no la haces') + '</span></div><button class="btn" data-a="empezar" data-id="' + r.id + '"' + (r.items.length ? '' : ' disabled') + '>' + I.play + 'Empezar entreno</button></div>';
+        return '<div class="card"><div class="row between" style="align-items:flex-start"><div class="col" style="gap:6px"><span class="sec acc">Rutina de hoy</span><span class="disp" style="font-size:24px">' + esc(r.nombre) + '</span><span class="mut" style="font-size:14px">' + esc(gruposDe(r).join(', ') || 'Sin ejercicios') + '</span></div><span class="tag">' + r.items.length + ' ejercicios</span></div><div class="row tx2" style="font-size:13px;gap:16px"><span>' + (u ? 'Última vez: ' + relDay(u) : 'Aún no la haces') + '</span></div><button class="btn" data-a="empezar" data-id="' + r.id + '"' + (r.items.length ? '' : ' disabled') + '>' + I.play + 'Empezar entreno</button></div>';
       }).join('');
     }
   }
@@ -473,22 +524,23 @@ function normalizarGrupos(items){
     visto[items[i].grupo] = true;
   }
   for (let i = 0; i < items.length; i++) { const g = items[i].grupo; if (g && !(i > 0 && items[i-1].grupo === g) && !(i < items.length - 1 && items[i+1].grupo === g)) items[i].grupo = null; }
-  for (let i = 0; i < items.length; i++) { if (items[i].grupo) { const [st] = bloqueDe(items, i); if (st !== i) items[i].series = items[st].series; } }
 }
 function vEditor(){
   const d = ui.draft;
   const dias = DIAS.map((l, i) => '<button class="dtog' + (d.dias.includes(i) ? ' on' : '') + '" data-a="toggleDia" data-i="' + i + '" aria-pressed="' + d.dias.includes(i) + '" aria-label="' + DIAS_LARGO[i] + '">' + l + '</button>').join('');
-  const desc = [30,45,60,75,90,120,150,180,240,300];
+  // 0 = descanso libre: cronómetro desde cero, sin alarma
+  const desc = [0,30,45,60,75,90,120,150,180,240,300];
   let items = '';
   d.items.forEach((it, i) => {
     const enG = !!it.grupo; const [st, en] = bloqueDe(d.items, i);
     const esPrimero = !enG || st === i, esUltimo = !enG || en === i;
     const letra = enG ? String.fromCharCode(65 + i - st) : '';
-    const serieCampo = esPrimero ? '<label class="col" style="gap:4px"><span class="lbl">' + (enG ? 'Rondas' : 'Series') + '</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="series" value="' + esc(it.series) + '"></label>' : '';
-    const descCampo = esUltimo ? '<label class="col" style="gap:4px;flex:1;min-width:110px"><span class="lbl">' + (enG ? 'Descanso tras la ronda' : 'Descanso') + '</span><select class="field" style="height:40px;font-size:15px;border-radius:10px" data-ch="item" data-i="' + i + '" data-f="descanso">' + desc.map(x => '<option value="' + x + '"' + (+it.descanso === x ? ' selected' : '') + '>' + mmss(x) + '</option>').join('') + '</select></label>' : '';
+    const dv = it.descanso == null ? 90 : +it.descanso;
+    const uniCampo = '<label class="row" style="gap:8px;flex:1;min-width:140px;padding-bottom:6px"><button class="sw' + (it.unilateral ? ' on' : '') + '" data-a="toggleUni" data-i="' + i + '" role="switch" aria-checked="' + !!it.unilateral + '" aria-label="Unilateral"></button><span class="col" style="gap:1px"><span style="font-size:14px;font-weight:600">Unilateral</span><span class="mut" style="font-size:11px">Cada lado por separado</span></span></label>';
+    const descCampo = esUltimo ? '<label class="col" style="gap:4px;flex:1;min-width:130px"><span class="lbl">' + (enG ? 'Descanso tras la ronda' : 'Descanso') + '</span><select class="field" style="height:40px;font-size:15px;border-radius:10px" data-ch="item" data-i="' + i + '" data-f="descanso">' + desc.map(x => '<option value="' + x + '"' + (dv === x ? ' selected' : '') + '>' + (x ? mmss(x) + ' (con alarma)' : 'Libre (sin límite)') + '</option>').join('') + '</select></label>' : '';
     const top = enG && esPrimero ? '<div class="row" style="gap:8px"><span class="tag acc">Biserie</span><span class="mut" style="font-size:12px">Se hacen seguidos, sin descanso entre ellos</span></div>' : '';
     items += '<div class="card' + (enG ? ' hi' : '') + '" style="padding:12px 12px 14px;gap:10px' + (enG ? ';background:rgba(var(--acc-rgb),.06)' : '') + '">' + top + '<div class="row"><span class="num"' + (enG ? ' style="background:var(--acc);color:var(--acc-tx)"' : '') + '>' + (enG ? letra : (i+1)) + '</span><span style="flex:1;font-weight:600">' + esc(ejName(it.ejId)) + '</span><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="-1" aria-label="Subir"' + (i === 0 ? ' disabled' : '') + '>' + I.up + '</button><button class="ico" style="width:36px;height:36px" data-a="mover" data-i="' + i + '" data-d="1" aria-label="Bajar"' + (i === d.items.length - 1 ? ' disabled' : '') + '>' + I.dn + '</button><button class="ico" style="width:36px;height:36px;color:var(--mut)" data-a="quitarItem" data-i="' + i + '" aria-label="Quitar">' + I.x + '</button></div>' +
-      '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">' + serieCampo + '<label class="col" style="gap:4px"><span class="lbl">Reps mín.</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="repsMin" value="' + esc(it.repsMin) + '"></label><label class="col" style="gap:4px"><span class="lbl">Reps máx.</span><input class="mini" inputmode="numeric" data-in="item" data-i="' + i + '" data-f="repsMax" value="' + esc(it.repsMax) + '"></label>' + descCampo + (esUltimo ? '' : '<span class="mut" style="font-size:12px;padding-bottom:10px">Sin descanso, sigue ' + String.fromCharCode(66 + i - st) + '</span>') + '</div></div>';
+      '<div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">' + uniCampo + descCampo + (esUltimo ? '' : '<span class="mut" style="font-size:12px;padding-bottom:10px">Sin descanso, sigue ' + String.fromCharCode(66 + i - st) + '</span>') + '</div></div>';
     if (i < d.items.length - 1) {
       const unido = enG && d.items[i+1].grupo === it.grupo;
       items += unido
@@ -500,7 +552,7 @@ function vEditor(){
     '<label class="col" style="gap:8px"><span class="sec">Nombre</span><input class="field disp" style="font-size:17px" data-in="draftNombre" value="' + esc(d.nombre) + '" placeholder="Ej: Empuje A"></label>' +
     '<div class="col" style="gap:8px"><span class="sec">Días</span><div class="grid7">' + dias + '</div></div>' +
     '<div class="col"><div class="row between"><span class="sec">Ejercicios, en orden</span><span class="mut" style="font-size:12px">' + d.items.length + '</span></div>' +
-    (d.items.length > 1 ? '<p class="note" style="margin:0">Para hacer una biserie, toca “Unir en biserie” entre dos ejercicios.</p>' : '') + items +
+    '<p class="note" style="margin:0">Aquí solo eliges los ejercicios, su orden y el descanso. Las series, pesos y repeticiones se anotan al entrenar.' + (d.items.length > 1 ? ' Para hacer una biserie, toca “Unir en biserie” entre dos ejercicios.' : '') + '</p>' + items +
     '<button class="btn dash" data-a="abrirPicker">' + I.plus + 'Añadir ejercicio</button></div>' +
     (d.isNew ? '' : '<button class="btn soft" style="color:var(--bad)" data-a="borrarRutina">' + I.trash + 'Borrar rutina</button>');
 }
@@ -517,18 +569,83 @@ function vPicker(){
     '<div class="card" style="gap:10px"><span class="sec">¿No está? Créalo</span><input class="field" data-in="nuevoEjNombre" placeholder="Nombre del ejercicio" value="' + esc(ui.picker.nombre || '') + '"><select class="field" data-ch="nuevoEjGrupo">' + GRUPOS.map(g => '<option' + (g === (ui.picker.grupo || 'Pecho') ? ' selected' : '') + '>' + g + '</option>').join('') + '</select><button class="btn soft" data-a="crearEj">' + I.plus + 'Crear y añadir</button></div></div></div>';
 }
 
-/* ----- Entreno ----- */
-function startEntreno(r){
+/* ----- Antes de empezar: confirmar el orden ----- */
+// Copia de los ejercicios solo para hoy: moverlos aquí no cambia la rutina guardada.
+function abrirPrevia(r, desde){
   if (S.activo) { toast('Ya tienes un entreno en curso.'); go('entreno'); return; }
   const items = JSON.parse(JSON.stringify(r.items)); normalizarGrupos(items);
+  ui.previa = { rutinaId: r.id, items: items, desde: desde || 'rutinas' };
+  go('previa');
+}
+function vPrevia(){
+  const p = ui.previa, r = p && rutById(p.rutinaId);
+  if (!r) { ui.previa = null; ui.view = 'rutinas'; return vRutinas(); }
+  const it = p.items, bl = bloques({ ejercicios: it });
+  const cambiado = it.map(x => x.ejId).join() !== r.items.map(x => x.ejId).join();
+  const lista = bl.map(([s, e], k) => {
+    const bi = e > s, nombres = [];
+    for (let i = s; i <= e; i++) nombres.push('<span class="row" style="gap:8px;flex-wrap:wrap">' + (bi ? '<span class="num" style="width:22px;height:22px;font-size:11px;background:var(--acc);color:var(--acc-tx)">' + String.fromCharCode(65 + i - s) + '</span>' : '') + '<span style="font-weight:600">' + esc(ejName(it[i].ejId)) + '</span>' + (it[i].unilateral ? '<span class="tag" style="font-size:10px;padding:2px 7px">Unilateral</span>' : '') + '</span>');
+    return '<div class="item" style="align-items:flex-start;padding:12px"><span class="num">' + (k + 1) + '</span><div class="col" style="gap:6px;flex:1;min-width:0">' + (bi ? '<span class="tag acc" style="align-self:flex-start">Biserie</span>' : '') + nombres.join('') + '<span class="mut" style="font-size:12px">Descanso ' + descTxt(it[e].descanso) + '</span></div>' +
+      '<div class="col" style="gap:4px"><button class="ico" style="width:36px;height:36px" data-a="moverPrevia" data-k="' + k + '" data-d="-1" aria-label="Subir"' + (k === 0 ? ' disabled' : '') + '>' + I.up + '</button><button class="ico" style="width:36px;height:36px" data-a="moverPrevia" data-k="' + k + '" data-d="1" aria-label="Bajar"' + (k === bl.length - 1 ? ' disabled' : '') + '>' + I.dn + '</button></div></div>';
+  }).join('');
+  return '<div class="row between" style="margin:-12px -8px 0"><button class="ico" data-a="cerrarPrevia" aria-label="Volver">' + I.back + '</button><span style="font-weight:600">Confirmar orden</span><span style="width:44px"></span></div>' +
+    '<div class="col" style="gap:6px"><h2>' + esc(r.nombre) + '</h2><span class="mut" style="font-size:14px;line-height:1.4">Revisa el orden antes de empezar. Si hoy lo vas a hacer distinto, muévelo con las flechas. Tu rutina guardada no cambia.</span></div>' +
+    '<div class="col" style="gap:10px">' + lista + '</div>' +
+    (cambiado ? '<button class="btn soft" style="color:var(--tx)" data-a="ordenOriginal">Volver al orden de la rutina</button>' : '') +
+    '<div class="bar"><div class="in"><button class="btn" data-a="empezarPrevia">' + I.play + 'Empezar entreno</button></div></div>';
+}
+function moverPrevia(k, d){
+  const it = ui.previa.items, bl = bloques({ ejercicios: it }), j = k + d;
+  if (j < 0 || j >= bl.length) return;
+  [bl[k], bl[j]] = [bl[j], bl[k]];
+  ui.previa.items = bl.reduce((t, x) => t.concat(it.slice(x[0], x[1] + 1)), []);
+  render();
+}
+
+/* ----- Entreno ----- */
+/* Serie en curso: { pasos, done, descanso, skip?, hecha? }.
+   Cada paso es una celda { kg, reps, sugKg, sugReps, hayPrev } o, si el ejercicio es unilateral, { I: celda, D: celda }.
+   Normal = 1 paso; pirámide = varios pasos (varios pesos dentro de la misma serie).
+   kg/reps = lo que escribe el usuario, en la unidad del ejercicio (ex.unidad: 'kg' o 'lb').
+   sugKg/sugReps = sugerencia (lo de la vez anterior), siempre en kg. */
+const LADOS = ['I', 'D'];
+const celdas = s => s.pasos.reduce((t, x) => t.concat(x.I || x.D ? [x.I, x.D] : [x]), []);
+const descDe = it => it.descanso == null || isNaN(+it.descanso) ? 90 : +it.descanso;
+// celda de una serie guardada (historial) para el paso p y el lado l
+function celdaH(hs, p, l){
+  if (!hs) return null;
+  const ps = hs.pasos || [{ kg: hs.kg, reps: hs.reps }], x = ps[p];
+  if (!x) return null;
+  return x.I || x.D ? (x[l || 'I'] || x.I || x.D) : x;
+}
+// valor actual (en kg) de una celda de hoy, para sugerir la siguiente
+function celdaActual(ex, s, p, l){
+  const x = s.pasos[Math.min(p, s.pasos.length - 1)], c = x.I ? x[l || 'I'] : x, k = num(c.kg);
+  return { kg: isNaN(k) ? c.sugKg : aKg(k, ex.unidad), reps: c.reps !== '' ? c.reps : c.sugReps };
+}
+const celdaNueva = (h, b) => { const s = h || b; return { kg: '', reps: '', sugKg: s && s.kg !== '' && s.kg != null ? s.kg : '', sugReps: s && s.reps ? s.reps : '', hayPrev: !!h }; };
+function pasoNuevo(ex, h, b){ return ex.uni ? { I: celdaNueva(h('I'), b('I')), D: celdaNueva(h('D'), b('D')) } : celdaNueva(h(''), b('')); }
+// Serie nueva: guía = la serie k de la última vez; si no la hay, la serie anterior de hoy (o la última del historial).
+function nuevaSerie(ex, k){
+  const hist = ultimaVez(ex.ejId), hs = hist ? hist[k] : null, ult = hist ? hist[hist.length - 1] : null;
+  const ant = ex.series.slice().reverse().find(z => !z.skip);
+  const nP = hs ? (hs.pasos ? hs.pasos.length : 1) : (ant ? ant.pasos.length : 1);
+  const pasos = [];
+  for (let p = 0; p < nP; p++) pasos.push(pasoNuevo(ex, l => celdaH(hs, p, l), l => ant ? celdaActual(ex, ant, p, l) : (celdaH(ult, p, l) || celdaH(ult, 0, l))));
+  return { pasos: pasos, done: false, descanso: null };
+}
+const serieVacia = ex => ({ pasos: [pasoNuevo(ex, () => null, () => null)], done: true, skip: true, descanso: null });
+const histIdx = (ex, r) => ex.series.slice(0, r).filter(z => !z.skip).length;
+function exNuevo(ejId, uni, descanso, grupo){
+  const ue = ultimoEj(ejId);
+  return { ejId: ejId, grupo: grupo || null, uni: !!uni, unidad: ue && ue.unidad === 'lb' ? 'lb' : 'kg', descanso: descanso, series: [] };
+}
+function startEntreno(r, orden){
+  if (S.activo) { toast('Ya tienes un entreno en curso.'); go('entreno'); return; }
+  const items = JSON.parse(JSON.stringify(orden || r.items)); normalizarGrupos(items);
+  // cada ejercicio arranca con 1 serie; las demás se agregan durante el entreno
   S.activo = { id: uid(), rutinaId: r.id, nombre: r.nombre, inicio: Date.now(), idx: 0, descanso: null,
-    ejercicios: items.map(it => {
-      const last = ultimaVez(it.ejId);
-      const n = Math.max(1, +it.series || 3);
-      const reps = it.repsMin && it.repsMax && it.repsMin !== it.repsMax ? it.repsMin + '–' + it.repsMax : (it.repsMax || it.repsMin || '?');
-      return { ejId: it.ejId, grupo: it.grupo || null, reps: reps, objetivo: n + ' × ' + reps, descanso: +it.descanso || 90,
-        series: Array.from({ length: n }, (_, i) => { const p = last ? (last[i] || last[last.length-1]) : null; return { kg: '', reps: '', done: false, descanso: null, sugKg: p ? p.kg : '', sugReps: p ? p.reps : (it.repsMax || it.repsMin || ''), prev: p ? fmt(p.kg) + ' × ' + p.reps : '' }; }) };
-    }) };
+    ejercicios: items.map(it => { const ex = exNuevo(it.ejId, it.unilateral, descDe(it), it.grupo); ex.series.push(nuevaSerie(ex, 0)); return ex; }) };
   KN.notif.init(true).then(() => { restSig = ''; syncEntreno(); });
   saveActivo();
   go('entreno');
@@ -537,8 +654,34 @@ function miembros(a, idx){ const [s, e] = bloqueDe(a.ejercicios, idx == null ? a
 function nRondas(a, m){ return Math.max(...m.map(i => a.ejercicios[i].series.length)); }
 function celdaAbierta(a, m){ const R = nRondas(a, m); for (let r = 0; r < R; r++) for (const i of m) { const s = a.ejercicios[i].series[r]; if (s && !s.done) return { e: i, r: r }; } return null; }
 function bloques(a){ const out = []; let i = 0; while (i < a.ejercicios.length) { const [s, e] = bloqueDe(a.ejercicios, i); out.push([s, e]); i = e + 1; } return out; }
-function inputsSerie(e, r, s, cls){
-  return '<input class="sin" inputmode="decimal" aria-label="Peso" data-in="set" data-e="' + e + '" data-i="' + r + '" data-f="kg" value="' + esc(s.kg) + '" placeholder="' + esc(s.sugKg) + '"><input class="sin" inputmode="numeric" aria-label="Repeticiones" data-in="set" data-e="' + e + '" data-i="' + r + '" data-f="reps" value="' + esc(s.reps) + '" placeholder="' + esc(s.sugReps) + '"><button class="chk' + (s.done ? ' on' : '') + '" data-a="toggleSet" data-e="' + e + '" data-i="' + r + '" aria-pressed="' + s.done + '" aria-label="Marcar hecha">' + I.check + '</button>';
+function segUnidad(e){
+  const u = S.activo.ejercicios[e].unidad;
+  return '<span class="useg" role="group" aria-label="Unidad de peso">' + ['kg','lb'].map(x => '<button class="' + (u === x ? 'on' : '') + '" data-a="unidad" data-e="' + e + '" data-u="' + x + '" aria-pressed="' + (u === x) + '">' + x + '</button>').join('') + '</span>';
+}
+// Filas de una serie: una por paso (pirámide) y por lado (unilateral). El check marca la serie completa.
+function filasSerie(e, r, etiqueta, cur){
+  const ex = S.activo.ejercicios[e], s = ex.series[r], u = ex.unidad, pir = s.pasos.length > 1;
+  let h = '';
+  s.pasos.forEach((x, p) => {
+    (ex.uni ? LADOS : ['']).forEach((l, li) => {
+      const c = l ? x[l] : x, primera = p === 0 && li === 0, sk = num(c.sugKg);
+      const tag = [pir ? 'Peso ' + (p + 1) : '', l === 'I' ? 'Izq.' : l === 'D' ? 'Der.' : ''].filter(Boolean).join(' · ');
+      const prev = c.hayPrev && !isNaN(sk) ? fmt(deKg(sk, u)) + ' × ' + c.sugReps : '—';
+      const d = ' data-e="' + e + '" data-i="' + r + '" data-p="' + p + '" data-l="' + l + '"';
+      h += '<div class="srow">' + (primera ? etiqueta : '<span></span>') +
+        '<span class="col" style="gap:1px;min-width:0">' + (tag ? '<span class="ptag">' + tag + '</span>' : '') + '<span class="mut" style="font-size:12px">' + prev + '</span></span>' +
+        '<input class="sin" inputmode="decimal" aria-label="Peso en ' + u + (tag ? ', ' + tag : '') + '" data-in="set"' + d + ' data-f="kg" value="' + esc(c.kg) + '" placeholder="' + (isNaN(sk) ? '' : r1(deKg(sk, u))) + '">' +
+        '<input class="sin" inputmode="numeric" aria-label="Repeticiones' + (tag ? ', ' + tag : '') + '" data-in="set"' + d + ' data-f="reps" value="' + esc(c.reps) + '" placeholder="' + esc(c.sugReps) + '">' +
+        (primera ? '<button class="chk' + (s.done ? ' on' : '') + '" data-a="toggleSet" data-e="' + e + '" data-i="' + r + '" aria-pressed="' + s.done + '" aria-label="Marcar serie hecha">' + I.check + '</button>' : '<span></span>') + '</div>';
+    });
+  });
+  if (!s.done && (cur || pir)) h += '<div class="row" style="gap:6px;padding:0 2px 6px 42px;flex-wrap:wrap"><button class="tag" style="border:0;cursor:pointer" data-a="addPaso" data-e="' + e + '" data-i="' + r + '">+ Peso (pirámide)</button>' + (pir ? '<button class="tag" style="border:0;cursor:pointer" data-a="delPaso" data-e="' + e + '" data-i="' + r + '">− Quitar peso</button>' : '') + '</div>';
+  return '<div class="sblk' + (s.done ? ' done' : (cur ? ' cur' : '')) + '">' + h + '</div>';
+}
+function addPaso(e, r){
+  const ex = S.activo.ejercicios[e], s = ex.series[r], p = s.pasos.length;
+  const hist = ultimaVez(ex.ejId), hs = hist ? hist[histIdx(ex, r)] : null;
+  s.pasos.push(pasoNuevo(ex, l => celdaH(hs, p, l), l => celdaActual(ex, s, p - 1, l)));
 }
 function vEntreno(){
   const a = S.activo;
@@ -553,20 +696,20 @@ function vEntreno(){
   let cuerpo = '';
   if (!esBi) {
     const ex = a.ejercicios[a.idx];
-    const rows = ex.series.map((s, r) => '<div class="srow' + (s.done ? ' done' : (abierta && abierta.r === r ? ' cur' : '')) + '"><span style="text-align:center;font-weight:700">' + (r+1) + '</span><span class="mut" style="font-size:13px">' + (s.prev || '—') + '</span>' + inputsSerie(a.idx, r, s) + '</div>').join('');
-    cuerpo = '<div class="col" style="gap:6px"><h2>' + esc(ejName(ex.ejId)) + '</h2><span class="mut" style="font-size:13px">Objetivo: ' + esc(ex.objetivo) + ', descanso ' + mmss(ex.descanso) + '</span></div>' +
+    const rows = ex.series.map((s, r) => filasSerie(a.idx, r, '<span style="text-align:center;font-weight:700">' + (r+1) + '</span>', !!(abierta && abierta.r === r))).join('');
+    cuerpo = '<div class="row" style="align-items:flex-start;gap:12px"><div class="col" style="gap:6px;flex:1;min-width:0"><h2>' + esc(ejName(ex.ejId)) + '</h2><span class="mut" style="font-size:13px">' + (ex.uni ? 'Unilateral: anota cada lado. ' : '') + 'Descanso ' + descTxt(ex.descanso) + '</span></div>' + segUnidad(a.idx) + '</div>' +
       (abierta ? '<button class="btn ghost" style="height:46px;font-size:15px" data-a="abrirBiserie">' + I.link + ' Hacer biserie con otro ejercicio</button>' : '') +
-      '<div class="sets"><div class="srow head"><span style="text-align:center">Serie</span><span>Anterior</span><span style="text-align:center">kg</span><span style="text-align:center">Reps</span><span></span></div>' + rows + botonesSerie(ex.series.length > 1, 'serie') + '</div>';
+      '<div class="sets"><div class="srow head"><span style="text-align:center">Serie</span><span>Anterior</span><span style="text-align:center">' + ex.unidad + '</span><span style="text-align:center">Reps</span><span></span></div>' + rows + botonesSerie(ex.series.length > 1, 'serie') + '</div>';
   } else {
     const ultimo = a.ejercicios[m[m.length - 1]];
     cuerpo = '<div class="col" style="gap:8px"><div class="row" style="gap:8px"><span class="tag acc">Biserie</span><span class="mut" style="font-size:13px;flex:1">' + (abierta ? 'Ronda ' + (abierta.r + 1) + ' de ' + R : R + ' rondas hechas') + '</span>' + (abierta ? '<button class="tag" style="border:0;cursor:pointer" data-a="deshacerBiserie">Deshacer</button>' : '') + '</div>' +
-      m.map(i => '<div class="row" style="gap:10px"><span class="num" style="background:var(--acc);color:var(--acc-tx)">' + L(i) + '</span><span class="col" style="gap:2px"><span class="disp" style="font-size:18px;line-height:1.2">' + esc(ejName(a.ejercicios[i].ejId)) + '</span><span class="mut" style="font-size:12px">' + esc(a.ejercicios[i].reps) + ' reps</span></span></div>').join('') + '</div>' +
-      '<div class="item" style="font-size:13px;color:var(--tx2);padding:10px 12px">Haz ' + m.map(L).join(' y luego ') + ' sin descansar. El descanso (' + mmss(ultimo.descanso) + ') arranca al terminar la ronda.</div>';
+      m.map(i => '<div class="row" style="gap:10px"><span class="num" style="background:var(--acc);color:var(--acc-tx)">' + L(i) + '</span><span class="col" style="gap:2px;flex:1;min-width:0"><span class="disp" style="font-size:18px;line-height:1.2">' + esc(ejName(a.ejercicios[i].ejId)) + '</span>' + (a.ejercicios[i].uni ? '<span class="mut" style="font-size:12px">Unilateral</span>' : '') + '</span>' + segUnidad(i) + '</div>').join('') + '</div>' +
+      '<div class="item" style="font-size:13px;color:var(--tx2);padding:10px 12px">Haz ' + m.map(L).join(' y luego ') + ' sin descansar. El descanso (' + descTxt(ultimo.descanso) + ') arranca al terminar la ronda.</div>';
     for (let r = 0; r < R; r++) {
       const cur = abierta && abierta.r === r, done = m.every(i => { const s = a.ejercicios[i].series[r]; return !s || s.done; });
       const ultD = (a.ejercicios[m[m.length - 1]].series[r] || {}).descanso;
       cuerpo += '<div class="sets" style="' + (cur ? 'border:1.5px solid var(--acc)' : (done ? 'background:rgba(var(--acc-rgb),.07);border-color:transparent' : '')) + '"><div class="row between" style="padding:4px 2px 0"><span style="font-size:13px;font-weight:700' + (cur ? ';color:var(--acc)' : '') + '">Ronda ' + (r + 1) + '</span><span class="mut" style="font-size:12px">' + (cur ? 'Ahora: ' + L(abierta.e) : (done && ultD != null ? 'descansaste ' + mmss(ultD) : '')) + '</span></div>' +
-        m.map(i => { const s = a.ejercicios[i].series[r]; if (!s) return ''; if (s.skip) return '<div class="srow"><span class="num" style="width:30px;height:26px;font-size:12px">' + L(i) + '</span><span class="mut" style="font-size:12px;grid-column:span 4">Aún no estaba en la biserie</span></div>'; return '<div class="srow' + (s.done ? ' done' : (abierta && abierta.e === i && abierta.r === r ? ' cur' : '')) + '"><span class="num" style="width:30px;height:26px;font-size:12px">' + L(i) + '</span><span class="mut" style="font-size:12px">' + (s.prev || '—') + '</span>' + inputsSerie(i, r, s) + '</div>'; }).join('') + '</div>';
+        m.map(i => { const s = a.ejercicios[i].series[r]; if (!s) return ''; if (s.skip) return '<div class="srow"><span class="num" style="width:30px;height:26px;font-size:12px">' + L(i) + '</span><span class="mut" style="font-size:12px;grid-column:span 4">Aún no estaba en la biserie</span></div>'; return filasSerie(i, r, '<span class="num" style="width:30px;height:26px;font-size:12px">' + L(i) + '</span>', !!(abierta && abierta.e === i && abierta.r === r)); }).join('') + '</div>';
     }
     cuerpo += '<div class="sets" style="padding:10px">' + botonesSerie(R > 1, 'ronda') + '</div>';
   }
@@ -580,26 +723,35 @@ function vEntreno(){
     cuerpo +
     (!abierta ? '<div class="card hi" style="gap:10px"><span style="font-weight:700">' + (esBi ? 'Biserie completada' : 'Ejercicio completado') + '</span><div class="row" style="gap:8px"><button class="btn soft" style="color:var(--tx);font-size:15px" data-a="addSet">' + I.plus + (esBi ? 'Otra ronda' : 'Otra serie') + '</button><button class="btn" style="font-size:15px" data-a="hechaSiguiente">' + (nxB ? 'Siguiente' : 'Terminar') + '</button></div></div>' : '') +
     (nxB ? '<div class="item" style="background:#141518"><span class="mut" style="font-size:13px">Siguiente</span><span style="flex:1;font-weight:600">' + esc(nombreB(nxB)) + '</span>' + (nxB[1] > nxB[0] ? '<span class="tag acc">Biserie</span>' : '') + '</div>' : '<p class="note" style="margin:0">Es el último bloque. Al terminar, toca “Terminar”.</p>') +
+    '<button class="btn soft" style="color:var(--bad);font-size:15px" data-a="cancelarEntreno">' + I.x + 'Cancelar entreno</button>' +
     '<div class="bar"><div class="in"><button class="ico box" style="width:52px;height:52px;border-radius:14px" data-a="exNav" data-d="-1" aria-label="Anterior"' + (bIdx === 0 ? ' disabled' : '') + '>' + I.back + '</button><button class="btn" style="flex:1;font-size:15px" data-a="hechaSiguiente">' + textoBtn + '</button><button class="ico box" style="width:52px;height:52px;border-radius:14px" data-a="exNav" data-d="1" aria-label="Siguiente"' + (nxB ? '' : ' disabled') + '>' + I.next + '</button></div></div>';
 }
 function botonesSerie(puedeQuitar, nombre){
   return '<div class="row" style="gap:8px;margin-top:4px"><button class="btn soft" style="height:44px;font-size:14px" data-a="addSet">' + I.plus + 'Añadir ' + nombre + '</button>' + (puedeQuitar ? '<button class="btn soft" style="height:44px;font-size:14px;width:auto" data-a="delSet" aria-label="Quitar última ' + nombre + '">' + I.trash + '</button>' : '') + '</div>';
 }
+function resumenSerie(ex, s){
+  const c = celdas(s)[0], u = ex.unidad, k0 = num(c.kg), k = !isNaN(k0) ? k0 : deKg(num(c.sugKg), u), reps = c.reps || c.sugReps || '?';
+  return (ex.uni ? 'Izq. ' : '') + (isNaN(k) ? reps + ' reps' : fmt(k) + ' ' + u + ' × ' + reps) + (s.pasos.length > 1 ? ' (pirámide)' : '');
+}
 function vDescanso(){
-  const a = S.activo, d = a.descanso;
+  const a = S.activo, d = a.descanso, libre = !d.objetivo;
   const el = (Date.now() - d.inicio)/1000;
   const rest = d.objetivo - el;
-  const frac = Math.max(0, Math.min(1, rest / d.objetivo));
+  const frac = libre ? (el % 60) / 60 : Math.max(0, Math.min(1, rest / d.objetivo));
   const C = 754;
   const m = miembros(a, d.ex), esBi = m.length > 1, ab = celdaAbierta(a, m);
   const [, fin] = bloqueDe(a.ejercicios, d.ex), hayMas = fin < a.ejercicios.length - 1;
   let sig = '';
-  if (ab) { const s = a.ejercicios[ab.e].series[ab.r]; sig = (esBi ? 'Ronda ' + (ab.r + 1) + ': ' + String.fromCharCode(65 + ab.e - m[0]) + ', ' : '') + esc(ejName(a.ejercicios[ab.e].ejId)) + (esBi ? '' : ', serie ' + (ab.r + 1)) + (function(){ const k = !isNaN(num(s.kg)) ? num(s.kg) : num(s.sugKg); return '<span class="disp acc" style="float:right">' + (isNaN(k) ? '' : fmt(k) + ' kg × ') + (s.reps || s.sugReps || '?') + (isNaN(k) ? ' reps' : '') + '</span>'; })(); }
+  if (ab) { const ex = a.ejercicios[ab.e]; sig = (esBi ? 'Ronda ' + (ab.r + 1) + ': ' + String.fromCharCode(65 + ab.e - m[0]) + ', ' : '') + esc(ejName(ex.ejId)) + (esBi ? '' : ', serie ' + (ab.r + 1)) + '<span class="disp acc" style="float:right">' + esc(resumenSerie(ex, ex.series[ab.r])) + '</span>'; }
   else { const n = a.ejercicios[fin + 1]; sig = (esBi ? 'Terminaste la biserie. ' : 'Terminaste ' + esc(ejName(a.ejercicios[d.ex].ejId)) + '. ') + (n ? '¿Haces otra ' + (esBi ? 'ronda' : 'serie') + ' o sigues con ' + esc(ejName(n.ejId)) + '?' : '¿Haces otra ' + (esBi ? 'ronda' : 'serie') + ' o terminas?'); }
+  const big = libre ? mmss(el) : (rest >= 0 ? mmss(rest) : '+' + mmss(-rest));
+  const sub = libre ? 'Descanso libre' : (rest >= 0 ? 'de ' + mmss(d.objetivo) : 'Tiempo cumplido');
+  const ctrl = libre ? '<span class="mut" style="font-size:14px;text-align:center">Sin límite de tiempo. Sigue cuando estés listo.</span>'
+    : (alarmaT ? '<button class="btn" style="width:auto;background:var(--warn);color:#0E0F11" data-a="pararAlarma">Detener alarma</button>' : '') + '<div class="row" style="gap:12px"><button class="btn soft" style="width:96px;color:var(--tx)" data-a="ajDesc" data-s="-15">−15 s</button><button class="btn soft" style="width:96px;color:var(--tx)" data-a="ajDesc" data-s="15">+15 s</button></div>';
   return '<div class="overlay" role="dialog" aria-label="Descanso"><div class="in">' +
-    '<div class="row between"><span class="sec acc">Descanso</span><span class="mut" data-clock2>' + hms((Date.now() - a.inicio)/1000) + '</span></div>' +
-    '<div class="col" style="flex:1;align-items:center;justify-content:center;gap:24px"><div style="position:relative;width:260px;height:260px"><svg width="260" height="260" viewBox="0 0 272 272" aria-hidden="true"><circle cx="136" cy="136" r="120" fill="none" stroke="#202328" stroke-width="14"/><circle id="ring" cx="136" cy="136" r="120" fill="none" stroke="' + (rest <= 0 ? 'var(--warn)' : 'var(--acc)') + '" stroke-width="14" stroke-linecap="round" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - frac)) + '" transform="rotate(-90 136 136)"/></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span id="restBig" class="disp" style="font-size:68px;letter-spacing:-2px;font-variant-numeric:tabular-nums" aria-live="off">' + (rest >= 0 ? mmss(rest) : '+' + mmss(-rest)) + '</span><span id="restSub" class="mut" style="font-size:14px">' + (rest >= 0 ? 'de ' + mmss(d.objetivo) : 'Tiempo cumplido') + '</span></div></div>' +
-    '<div class="row" style="gap:12px"><button class="btn soft" style="width:96px;color:var(--tx)" data-a="ajDesc" data-s="-15">−15 s</button><button class="btn soft" style="width:96px;color:var(--tx)" data-a="ajDesc" data-s="15">+15 s</button></div></div>' +
+    '<div class="row between"><span class="sec acc">Descanso' + (libre ? ' libre' : '') + '</span><span class="mut" data-clock2>' + hms((Date.now() - a.inicio)/1000) + '</span></div>' +
+    '<div class="col" style="flex:1;align-items:center;justify-content:center;gap:24px"><div style="position:relative;width:260px;height:260px"><svg width="260" height="260" viewBox="0 0 272 272" aria-hidden="true"><circle cx="136" cy="136" r="120" fill="none" stroke="#202328" stroke-width="14"/><circle id="ring" cx="136" cy="136" r="120" fill="none" stroke="' + (!libre && rest <= 0 ? 'var(--warn)' : 'var(--acc)') + '" stroke-width="14" stroke-linecap="round" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - frac)) + '" transform="rotate(-90 136 136)"/></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span id="restBig" class="disp" style="font-size:68px;letter-spacing:-2px;font-variant-numeric:tabular-nums" aria-live="off">' + big + '</span><span id="restSub" class="mut" style="font-size:14px">' + sub + '</span></div></div>' +
+    ctrl + '</div>' +
     '<div class="card"><span class="sec">A continuación</span><span style="font-weight:600">' + sig + '</span></div>' +
     (!ab ? '<div class="col" style="gap:10px"><button class="btn" data-a="sigEjDesc">' + (hayMas ? 'Continuar con el siguiente ejercicio' : 'Terminar entreno') + '</button><button class="btn soft" style="color:var(--tx)" data-a="otraSerieDesc">' + I.plus + (esBi ? 'Hacer otra ronda' : 'Hacer otra serie') + '</button></div>' : '<button class="btn" data-a="finDesc">' + (esBi ? 'Empezar siguiente ronda' : 'Empezar siguiente serie') + '</button>') + '</div></div>';
 }
@@ -607,37 +759,54 @@ let beepCtx = null;
 function beep(){
   try {
     beepCtx = beepCtx || new (window.AudioContext || window.webkitAudioContext)();
-    [0, .25, .5].forEach(t => { const o = beepCtx.createOscillator(), g = beepCtx.createGain(); o.frequency.value = 880; o.connect(g); g.connect(beepCtx.destination); g.gain.setValueAtTime(.25, beepCtx.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, beepCtx.currentTime + t + .2); o.start(beepCtx.currentTime + t); o.stop(beepCtx.currentTime + t + .22); });
+    if (beepCtx.state === 'suspended') beepCtx.resume();
+    [0, .22, .44, .66].forEach(t => { const o = beepCtx.createOscillator(), g = beepCtx.createGain(); o.type = 'square'; o.frequency.value = 880; o.connect(g); g.connect(beepCtx.destination); g.gain.setValueAtTime(.35, beepCtx.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, beepCtx.currentTime + t + .18); o.start(beepCtx.currentTime + t); o.stop(beepCtx.currentTime + t + .2); });
   } catch(e){}
   KN.vibrate();
 }
+/* Alarma de fin de descanso (solo con tiempo definido): suena y vibra repetido hasta que la detengas,
+   empieces la siguiente serie o pasen 2 minutos. */
+let alarmaT = null, alarmaIni = 0;
+function alarmaOn(){
+  if (alarmaT) return;
+  alarmaIni = Date.now();
+  const f = () => { if (!S.activo || !S.activo.descanso || Date.now() - alarmaIni > 120000) { alarmaOff(); return; } beep(); };
+  alarmaT = setInterval(f, 1600); f();
+  renderLayer();
+}
+function alarmaOff(){ if (!alarmaT) return; clearInterval(alarmaT); alarmaT = null; renderLayer(); }
 function tick(){
   const a = S.activo;
-  if (!a || ui.view !== 'entreno') return;
+  if (!a) return;
+  const d = a.descanso;
+  if (d && d.objetivo && !d.avisado && d.objetivo - (Date.now() - d.inicio)/1000 <= 0) { d.avisado = true; if (!document.hidden) alarmaOn(); }
+  if (ui.view !== 'entreno') return;
   const t = hms((Date.now() - a.inicio)/1000);
   document.querySelectorAll('[data-clock],[data-clock2]').forEach(e => e.textContent = t);
-  if (a.descanso) {
-    const d = a.descanso, rest = d.objetivo - (Date.now() - d.inicio)/1000;
+  if (d) {
+    const libre = !d.objetivo, el = (Date.now() - d.inicio)/1000, rest = d.objetivo - el;
     const big = document.getElementById('restBig'), sub = document.getElementById('restSub'), ring = document.getElementById('ring');
-    if (big) big.textContent = rest >= 0 ? mmss(rest) : '+' + mmss(-rest);
-    if (sub) sub.textContent = rest >= 0 ? 'de ' + mmss(d.objetivo) : 'Tiempo cumplido';
-    if (ring) { ring.setAttribute('stroke-dashoffset', 754 * (1 - Math.max(0, Math.min(1, rest / d.objetivo)))); ring.setAttribute('stroke', rest <= 0 ? 'var(--warn)' : 'var(--acc)'); }
-    if (rest <= 0 && !d.avisado) { d.avisado = true; if (!restNotif) beep(); }
+    if (big) big.textContent = libre ? mmss(el) : (rest >= 0 ? mmss(rest) : '+' + mmss(-rest));
+    if (sub) sub.textContent = libre ? 'Descanso libre' : (rest >= 0 ? 'de ' + mmss(d.objetivo) : 'Tiempo cumplido');
+    if (ring) { ring.setAttribute('stroke-dashoffset', 754 * (1 - (libre ? (el % 60) / 60 : Math.max(0, Math.min(1, rest / d.objetivo))))); ring.setAttribute('stroke', !libre && rest <= 0 ? 'var(--warn)' : 'var(--acc)'); }
   }
 }
 setInterval(tick, 1000);
 function marcarSerie(e, i){
   const a = S.activo, ex = a.ejercicios[e], s = ex.series[i];
   if (s.done) { s.done = false; saveActivo(); render(); return; }
-  const kg = num(s.kg !== '' ? s.kg : s.sugKg), reps = num(s.reps !== '' ? s.reps : s.sugReps);
-  if (isNaN(reps) || reps <= 0) { toast('Escribe las repeticiones.'); return; }
-  if (s.kg === '') s.kg = isNaN(kg) ? '0' : String(s.sugKg === '' ? 0 : s.sugKg);
-  if (s.reps === '') s.reps = String(reps);
+  const cs = celdas(s);
+  if (cs.some(c => { const r = num(c.reps !== '' ? c.reps : c.sugReps); return isNaN(r) || r <= 0; })) { toast(ex.uni ? 'Escribe las repeticiones de cada lado.' : 'Escribe las repeticiones.'); return; }
+  // lo que quedó vacío se llena con la sugerencia (convertida a la unidad del ejercicio)
+  cs.forEach(c => {
+    if (c.kg === '' || isNaN(num(c.kg))) { const k = num(c.sugKg); c.kg = isNaN(k) ? '0' : r1(deKg(k, ex.unidad)); }
+    if (c.reps === '') c.reps = String(num(c.sugReps));
+  });
   s.done = true; s.hecha = Date.now();
   const m = miembros(a, e), ultimo = m[m.length - 1];
   const quedan = a.ejercicios.some(x => x.series.some(z => !z.done));
   // en biserie solo se descansa al terminar el último ejercicio de la ronda
-  if (quedan && e === ultimo) a.descanso = { inicio: Date.now(), objetivo: a.ejercicios[ultimo].descanso, ex: e, set: i };
+  if (quedan && e === ultimo) a.descanso = { inicio: Date.now(), objetivo: a.ejercicios[ultimo].descanso || 0, ex: e, set: i };
   saveActivo(); render();
 }
 function finDescanso(){
@@ -645,11 +814,12 @@ function finDescanso(){
   const s = a.ejercicios[d.ex].series[d.set];
   if (s) s.descanso = Math.round((Date.now() - d.inicio)/1000);
   a.descanso = null;
+  alarmaOff();
   saveActivo(); render();
 }
 function addSerie(){
   const a = S.activo;
-  miembros(a).forEach(i => { const ex = a.ejercicios[i], l = ex.series[ex.series.length - 1]; ex.series.push({ kg: '', reps: '', done: false, descanso: null, sugKg: l ? (l.kg || l.sugKg) : '', sugReps: l ? (l.reps || l.sugReps) : '', prev: '' }); });
+  miembros(a).forEach(i => { const ex = a.ejercicios[i]; ex.series.push(nuevaSerie(ex, ex.series.filter(z => !z.skip).length)); });
 }
 function candidatosBiserie(a){
   const out = [], [, e] = bloqueDe(a.ejercicios, a.idx);
@@ -660,20 +830,12 @@ function unirBiserie(j, ejId){
   const a = S.activo, c = a.idx, A = a.ejercicios[c];
   let B;
   if (j != null) { B = a.ejercicios.splice(j, 1)[0]; }
-  else {
-    const last = ultimaVez(ejId);
-    B = { ejId: ejId, grupo: null, reps: A.reps, objetivo: A.objetivo, descanso: A.descanso, series: [] };
-    B._last = last;
-  }
+  else { const ue = ultimoEj(ejId); B = exNuevo(ejId, ue && ue.uni, A.descanso); }
   const hechas = A.series.filter(z => z.done).length, faltan = A.series.length - hechas;
   const pend = B.series.filter(z => !z.done);
-  const last = B._last !== undefined ? B._last : null; delete B._last;
-  const nuevas = [];
-  for (let k = 0; k < faltan; k++) {
-    if (pend[k]) nuevas.push(pend[k]);
-    else { const p = last ? (last[k] || last[last.length - 1]) : (pend[pend.length - 1] || null); nuevas.push({ kg: '', reps: '', done: false, descanso: null, sugKg: p ? (p.kg != null ? p.kg : p.sugKg) : '', sugReps: p ? (p.reps || p.sugReps || '') : (A.reps || ''), prev: last && last[k] ? fmt(last[k].kg) + ' × ' + last[k].reps : '' }); }
-  }
-  B.series = Array.from({ length: hechas }, () => ({ kg: '', reps: '', done: true, skip: true, descanso: null, sugKg: '', sugReps: '', prev: '' })).concat(nuevas);
+  const nuevas = []; B.series = nuevas;
+  for (let k = 0; k < faltan; k++) nuevas.push(pend[k] || nuevaSerie(B, k));
+  B.series = Array.from({ length: hechas }, () => serieVacia(B)).concat(nuevas);
   B.descanso = A.descanso;
   const g = uid(); A.grupo = g; B.grupo = g;
   a.ejercicios.splice(c + 1, 0, B);
@@ -685,11 +847,22 @@ function siguienteEj(){
   if (e < a.ejercicios.length - 1) { a.idx = e + 1; saveActivo(); render(); window.scrollTo(0, 0); }
   else { ui.sheet = { tipo: 'terminar' }; renderLayer(); }
 }
+// Pasa una serie del entreno al formato guardado (todo en kg). kg/reps = el mejor peso de la serie.
+function serieGuardada(ex, s){
+  const cel = c => { const k = num(c.kg); return { kg: isNaN(k) ? 0 : aKg(k, ex.unidad), reps: num(c.reps) || 0 }; };
+  const pasos = s.pasos.map(x => ex.uni ? { I: cel(x.I), D: cel(x.D) } : cel(x));
+  const top = celdasG({ pasos: pasos }).reduce((b, c) => !b || c.kg > b.kg || (c.kg === b.kg && c.reps > b.reps) ? c : b, null);
+  const o = { kg: top.kg, reps: top.reps, descanso: s.descanso };
+  if (ex.uni || pasos.length > 1) o.pasos = pasos;
+  return o;
+}
+function descartarActivo(){ alarmaOff(); S.activo = null; saveActivo(); }
 function guardarSesion(){
   const a = S.activo; if (!a) return;
   if (a.descanso) { const s = a.ejercicios[a.descanso.ex].series[a.descanso.set]; if (s && s.descanso == null) s.descanso = Math.round((Date.now() - a.descanso.inicio)/1000); }
   const ses = { id: a.id, rutinaId: a.rutinaId, nombre: a.nombre, inicio: a.inicio, fin: Date.now(),
-    ejercicios: a.ejercicios.map(e => ({ ejId: e.ejId, nombre: ejName(e.ejId), grupo: e.grupo || null, series: e.series.filter(s => s.done && !s.skip).map(s => ({ kg: num(s.kg) || 0, reps: num(s.reps) || 0, descanso: s.descanso })) })).filter(e => e.series.length) };
+    ejercicios: a.ejercicios.map(e => ({ ejId: e.ejId, nombre: ejName(e.ejId), grupo: e.grupo || null, unidad: e.unidad, uni: !!e.uni, series: e.series.filter(s => s.done && !s.skip).map(s => serieGuardada(e, s)) })).filter(e => e.series.length) };
+  alarmaOff();
   S.activo = null; saveActivo();
   if (!ses.ejercicios.length) { ui.sheet = null; toast('No había series hechas. El entreno no se guardó.'); go('inicio'); return; }
   S.sesiones.unshift(ses); persist();
@@ -887,6 +1060,9 @@ function vSheet(){
   if (s.tipo === 'terminar') {
     const a = S.activo, done = a.ejercicios.reduce((t, e) => t + e.series.filter(x => x.done && !x.skip).length, 0), tot = a.ejercicios.reduce((t, e) => t + e.series.filter(x => !x.skip).length, 0);
     h = '<span class="disp" style="font-size:22px">¿Terminar entreno?</span><span class="tx2">Hiciste ' + done + ' de ' + tot + ' series en ' + Math.round((Date.now() - a.inicio)/60000) + ' min.' + (done < tot ? ' Las series sin marcar no se guardan.' : '') + '</span><button class="btn" data-a="guardarEntreno">Guardar entreno</button><button class="btn soft" data-a="cerrarSheet">Seguir entrenando</button><button class="btn soft" style="color:var(--bad)" data-a="descartarEntreno">Descartar sin guardar</button>';
+  } else if (s.tipo === 'cancelar') {
+    const r = S.activo && rutById(S.activo.rutinaId);
+    h = '<span class="disp" style="font-size:22px">¿Cancelar entreno?</span><span class="tx2">Se borra todo lo que llevas de este entreno y no se guarda nada.</span>' + (r ? '<button class="btn" data-a="cancelarReiniciar">Cancelar y empezar de nuevo</button>' : '') + '<button class="btn soft" style="color:var(--bad)" data-a="cancelarSinGuardar">Cancelar sin guardar</button><button class="btn soft" data-a="cerrarSheet">Seguir entrenando</button>';
   } else if (s.tipo === 'resumen') {
     const x = s.ses, dur = Math.round((x.fin - x.inicio)/60000);
     const prsN = x.ejercicios.filter(e => { const best = Math.max(...e.series.map(z => z.kg)); return !S.sesiones.some(o => o.id !== x.id && o.ejercicios.some(oe => oe.ejId === e.ejId && oe.series.some(z => z.kg >= best))) && best > 0; }).length;
@@ -894,7 +1070,7 @@ function vSheet(){
   } else if (s.tipo === 'biserie') {
     const a = S.activo, cand = candidatosBiserie(a);
     h = '<div class="row between"><span class="disp" style="font-size:22px">Hacer biserie</span><button class="ico" data-a="cerrarSheet" aria-label="Cerrar">' + I.x + '</button></div><span class="tx2" style="font-size:14px;line-height:1.45">Elige el ejercicio que vas a alternar con <b>' + esc(ejName(a.ejercicios[a.idx].ejId)) + '</b>. Se hacen seguidos y descansas al terminar los dos.</span>' +
-      (cand.length ? '<span class="sec">De esta rutina</span>' + cand.map(j => '<button class="item" style="text-align:left;color:var(--tx)" data-a="unirEntreno" data-j="' + j + '"><span class="col" style="gap:2px;flex:1"><span style="font-weight:600">' + esc(ejName(a.ejercicios[j].ejId)) + '</span><span class="mut" style="font-size:12px">' + esc(a.ejercicios[j].objetivo) + '</span></span>' + I.link + '</button>').join('') : '') +
+      (cand.length ? '<span class="sec">De esta rutina</span>' + cand.map(j => '<button class="item" style="text-align:left;color:var(--tx)" data-a="unirEntreno" data-j="' + j + '"><span class="col" style="gap:2px;flex:1"><span style="font-weight:600">' + esc(ejName(a.ejercicios[j].ejId)) + '</span><span class="mut" style="font-size:12px">' + (a.ejercicios[j].uni ? 'Unilateral, ' : '') + 'descanso ' + descTxt(a.ejercicios[j].descanso) + '</span></span>' + I.link + '</button>').join('') : '') +
       '<button class="btn soft" style="color:var(--tx)" data-a="biserieOtro">' + I.search + 'Elegir otro ejercicio</button>';
   } else if (s.tipo === 'meta') {
     h = '<span class="disp" style="font-size:22px">Meta de peso</span><input class="field" id="metaIn" inputmode="decimal" placeholder="Ej: 80" value="' + (S.perfil.pesoMeta ? fmt(S.perfil.pesoMeta) : '') + '" aria-label="Meta de peso en kg"><button class="btn" data-a="guardarMeta">Guardar meta</button>' + (S.perfil.pesoMeta ? '<button class="btn soft" data-a="quitarMeta">Quitar meta</button>' : '');
@@ -920,24 +1096,36 @@ const A = {
   separar: el => { const it = ui.draft.items, i = +el.dataset.i, [st, en] = bloqueDe(it, i); const ng = uid(); for (let k = i + 1; k <= en; k++) it[k].grupo = ng; normalizarGrupos(it); render(); },
   abrirPicker: () => { ui.picker = { q: '', nombre: '', grupo: 'Pecho' }; renderLayer(); },
   cerrarPicker: () => { ui.picker = null; renderLayer(); },
-  elegirEj: el => { if (ui.picker && ui.picker.modo === 'bis') { ui.picker = null; unirBiserie(null, el.dataset.id); return; } ui.draft.items.push({ ejId: el.dataset.id, series: 3, repsMin: 8, repsMax: 12, descanso: 90 }); ui.picker = null; render(); },
-  crearEj: () => { const n = (ui.picker.nombre || '').trim(); if (!n) { toast('Escribe el nombre del ejercicio.'); return; } const e = { id: uid(), nombre: n, grupo: ui.picker.grupo || 'Pecho' }; S.ejercicios.push(e); saveConfig(); if (ui.picker.modo === 'bis') { ui.picker = null; unirBiserie(null, e.id); return; } ui.draft.items.push({ ejId: e.id, series: 3, repsMin: 8, repsMax: 12, descanso: 90 }); ui.picker = null; render(); },
+  elegirEj: el => { if (ui.picker && ui.picker.modo === 'bis') { ui.picker = null; unirBiserie(null, el.dataset.id); return; } ui.draft.items.push({ ejId: el.dataset.id, descanso: 90, unilateral: false }); ui.picker = null; render(); },
+  crearEj: () => { const n = (ui.picker.nombre || '').trim(); if (!n) { toast('Escribe el nombre del ejercicio.'); return; } const e = { id: uid(), nombre: n, grupo: ui.picker.grupo || 'Pecho' }; S.ejercicios.push(e); saveConfig(); if (ui.picker.modo === 'bis') { ui.picker = null; unirBiserie(null, e.id); return; } ui.draft.items.push({ ejId: e.id, descanso: 90, unilateral: false }); ui.picker = null; render(); },
   guardarRutina: () => {
     const d = ui.draft; d.nombre = (d.nombre || '').trim();
     if (!d.nombre) { toast('Ponle un nombre a la rutina.'); return; }
     if (!d.items.length) { toast('Añade al menos un ejercicio.'); return; }
     normalizarGrupos(d.items);
-    d.items.forEach(it => { it.series = Math.max(1, parseInt(it.series) || 3); it.repsMin = Math.max(1, parseInt(it.repsMin) || 8); it.repsMax = Math.max(it.repsMin, parseInt(it.repsMax) || it.repsMin); it.descanso = +it.descanso || 90; });
+    d.items.forEach(it => { it.descanso = descDe(it); it.unilateral = !!it.unilateral; delete it.series; delete it.repsMin; delete it.repsMax; });
     const isNew = d.isNew; delete d.isNew;
     const k = S.rutinas.findIndex(r => r.id === d.id); if (k === -1) S.rutinas.push(d); else S.rutinas[k] = d;
     saveConfig(); ui.draft = null; toast(isNew ? 'Rutina creada.' : 'Rutina guardada.'); go('rutinas');
   },
   borrarRutina: () => confirmar('¿Borrar rutina?', 'Se borra la rutina, pero tus entrenos ya hechos se mantienen.', 'Borrar', () => { S.rutinas = S.rutinas.filter(r => r.id !== ui.draft.id); saveConfig(); ui.draft = null; go('rutinas'); }),
-  empezar: el => { const r = rutById(el.dataset.id); if (r && r.items.length) startEntreno(r); },
+  empezar: el => { const r = rutById(el.dataset.id); if (r && r.items.length) abrirPrevia(r, ui.view); },
+  cerrarPrevia: () => atras(),
+  moverPrevia: el => moverPrevia(+el.dataset.k, +el.dataset.d),
+  ordenOriginal: () => { const r = rutById(ui.previa.rutinaId); if (!r) return; const it = JSON.parse(JSON.stringify(r.items)); normalizarGrupos(it); ui.previa.items = it; render(); },
+  empezarPrevia: () => { const p = ui.previa, r = p && rutById(p.rutinaId); ui.previa = null; if (r) startEntreno(r, p.items); else go('rutinas'); },
+  toggleUni: el => { const it = ui.draft.items[+el.dataset.i]; it.unilateral = !it.unilateral; render(); },
+  unidad: el => { S.activo.ejercicios[+el.dataset.e].unidad = el.dataset.u === 'lb' ? 'lb' : 'kg'; saveActivo(); render(); },
+  addPaso: el => { addPaso(+el.dataset.e, +el.dataset.i); saveActivo(); render(); },
+  delPaso: el => { const s = S.activo.ejercicios[+el.dataset.e].series[+el.dataset.i]; if (s.pasos.length > 1) s.pasos.pop(); saveActivo(); render(); },
+  pararAlarma: () => alarmaOff(),
+  cancelarEntreno: () => { ui.sheet = { tipo: 'cancelar' }; renderLayer(); },
+  cancelarReiniciar: () => { const r = rutById(S.activo.rutinaId); ui.sheet = null; descartarActivo(); if (r && r.items.length) abrirPrevia(r, 'inicio'); else go('inicio'); },
+  cancelarSinGuardar: () => { ui.sheet = null; descartarActivo(); toast('Entreno cancelado. No se guardó nada.'); go('inicio'); },
   abrirBiserie: () => { ui.sheet = { tipo: 'biserie' }; renderLayer(); },
   biserieOtro: () => { ui.sheet = null; ui.picker = { q: '', nombre: '', grupo: 'Pecho', modo: 'bis' }; renderLayer(); },
   unirEntreno: el => { ui.sheet = null; unirBiserie(+el.dataset.j, null); },
-  deshacerBiserie: () => { const a = S.activo; miembros(a).forEach(i => { const ex = a.ejercicios[i]; ex.grupo = null; ex.series = ex.series.filter(z => !z.skip); if (!ex.series.length) ex.series.push({ kg: '', reps: '', done: false, descanso: null, sugKg: '', sugReps: '', prev: '' }); }); saveActivo(); render(); },
+  deshacerBiserie: () => { const a = S.activo; miembros(a).forEach(i => { const ex = a.ejercicios[i]; ex.grupo = null; ex.series = ex.series.filter(z => !z.skip); if (!ex.series.length) ex.series.push(nuevaSerie(ex, 0)); }); saveActivo(); render(); },
   toggleSet: el => marcarSerie(+el.dataset.e, +el.dataset.i),
   addSet: () => { addSerie(); saveActivo(); render(); },
   otraSerieDesc: () => { finDescanso(); addSerie(); saveActivo(); render(); },
@@ -949,11 +1137,11 @@ const A = {
     if (ab) { marcarSerie(ab.e, ab.r); return; }
     siguienteEj();
   },
-  ajDesc: el => { const d = S.activo.descanso; d.objetivo = Math.max(5, d.objetivo + (+el.dataset.s)); if (d.objetivo - (Date.now() - d.inicio)/1000 > 0) d.avisado = false; saveActivo(true); tick(); },
+  ajDesc: el => { const d = S.activo.descanso; if (!d.objetivo) return; d.objetivo = Math.max(5, d.objetivo + (+el.dataset.s)); if (d.objetivo - (Date.now() - d.inicio)/1000 > 0) { d.avisado = false; alarmaOff(); } saveActivo(true); tick(); },
   finDesc: () => finDescanso(),
   terminar: () => { ui.sheet = { tipo: 'terminar' }; renderLayer(); },
   guardarEntreno: () => { ui.sheet = null; guardarSesion(); },
-  descartarEntreno: () => confirmar('¿Descartar entreno?', 'Se pierden todas las series de este entreno.', 'Descartar', () => { S.activo = null; saveActivo(); go('inicio'); }),
+  descartarEntreno: () => confirmar('¿Descartar entreno?', 'Se pierden todas las series de este entreno.', 'Descartar', () => { descartarActivo(); go('inicio'); }),
   cerrarSheet: () => { ui.sheet = null; renderLayer(); },
   confirmarSi: () => { const fn = ui.sheet.fn; ui.sheet = null; fn(); renderLayer(); },
   borrarSesion: el => confirmar('¿Borrar entreno?', 'Se quita del historial y de las estadísticas.', 'Borrar', () => { const id = el.dataset.id; S.sesiones = S.sesiones.filter(s => s.id !== id); persist(); render(); }),
@@ -999,7 +1187,7 @@ document.addEventListener('input', e => {
   else if (k === 'item') ui.draft.items[+el.dataset.i][el.dataset.f] = el.value;
   else if (k === 'pickerQ') { ui.picker.q = el.value; const pos = el.selectionStart; renderLayer(); const n = document.querySelector('[data-in="pickerQ"]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
   else if (k === 'nuevoEjNombre') ui.picker.nombre = el.value;
-  else if (k === 'set') { const s = S.activo.ejercicios[+el.dataset.e].series[+el.dataset.i]; s[el.dataset.f] = el.value; saveActivo(true); }
+  else if (k === 'set') { const x = S.activo.ejercicios[+el.dataset.e].series[+el.dataset.i].pasos[+el.dataset.p]; const c = el.dataset.l ? x[el.dataset.l] : x; c[el.dataset.f] = el.value; saveActivo(true); }
   else if (k === 'md') { const f = el.dataset.f; if (f.startsWith('p_')) ui.medidaDraft.partes[f.slice(2)] = el.value; else ui.medidaDraft[f] = el.value; }
 });
 document.addEventListener('change', e => {
