@@ -12,6 +12,17 @@ El color de acento se puede cambiar en Ajustes → Color de la app (se guarda en
   `kg`/`reps` son el mejor peso de la serie y `pasos` solo existe en pirámides o unilaterales
   (`{ I: {kg, reps}, D: {kg, reps} }`).
 
+## Coach IA
+
+El Coach (Estadísticas → Coach IA) analiza tus entrenos con un modelo de lenguaje usando **tu propia clave de API**.
+Por ahora el proveedor es Claude (Anthropic): la primera vez pide la clave, la verifica trayendo la lista de modelos
+(`GET /v1/models`) y deja elegir el modelo (sugiere el Opus más reciente). El análisis y las preguntas de seguimiento
+usan `POST /v1/messages` directo desde la app (`fetch` con el encabezado `anthropic-dangerous-direct-browser-access`).
+La conexión se cambia o se borra con el engranaje del Coach o en Ajustes → Coach IA.
+
+La clave se guarda solo en el celular, en una llave aparte (`kratos_ia_v1`): **no** va en la copia exportada y
+importar datos no la toca. El código está en `scripts/artifact/coach.js` (y copiado igual en `src/index.html`).
+
 ## Descargar
 
 Última versión del APK (enlace fijo):
@@ -55,7 +66,7 @@ No la pierdas: si cambia, hay que desinstalar la app (y se pierden los datos no 
 
 1. Guarda el HTML del artifact en la carpeta del proyecto (por ejemplo `kratos (2).html`).
 2. `npm run adaptar -- "kratos (2).html"`. Quita lo de Claude y agrega guardado local, Ajustes,
-   Coach "en desarrollo", pantalla encendida y avisos de descanso. Respeta colores y diseño.
+   Coach IA (desde `scripts/artifact/coach.js`), pantalla encendida y avisos de descanso. Respeta colores y diseño.
 3. Haz commit y push a `main`: GitHub Actions compila y publica el APK nuevo.
 
 ## Probar en el navegador
