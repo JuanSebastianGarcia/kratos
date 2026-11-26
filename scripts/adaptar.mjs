@@ -5,7 +5,8 @@
 // Qué hace:
 //  - Quita claude.use('db') / localStorage y guarda todo en el celular (Capacitor Preferences).
 //  - Agrega la pantalla Ajustes (engranaje en Inicio) con Exportar / Importar datos en JSON.
-//  - Deja el Coach IA como "Trabajando / en desarrollo" (sin claude.use('sample')).
+//  - Conecta el Coach IA a Claude (Anthropic) con la clave de API del usuario (scripts/artifact/coach.js)
+//    en vez de claude.use('sample'). La clave se guarda aparte y no sale en Exportar.
 //  - Pantalla encendida durante el entreno y notificación con sonido y vibración al terminar el descanso.
 //  - Fuentes incluidas en la app (sin Google Fonts) y botón atrás de Android.
 // Los colores y el diseño se respetan tal como vienen en el artifact.
@@ -32,6 +33,14 @@ s = s.replace('</style>', `/* selector de color (Ajustes) */
 .accs button.on{border-color:var(--tx);box-shadow:inset 0 0 0 3px var(--s1)}
 input.rng{-webkit-appearance:none;appearance:none;width:100%;height:26px;border-radius:13px;outline:none;margin:0;background:var(--s2)}
 input.rng::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:15px;background:#fff;border:3px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.6)}
+/* respuestas del Coach IA en Markdown */
+.md{display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.55;color:var(--tx2)}
+.md h3,.md h4{margin:6px 0 0;font-family:"Space Grotesk",Inter,sans-serif;font-weight:700;color:var(--tx);line-height:1.25}
+.md h3{font-size:18px}.md h4{font-size:15px}
+.md p,.md ul,.md ol{margin:0}.md ul,.md ol{padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.md strong{color:var(--tx)}.md code{background:var(--s2);border-radius:6px;padding:1px 5px;font-size:13px}
+.md hr{border:0;border-top:1px solid var(--line);margin:4px 0;width:100%}
+.bubble.md{white-space:normal}
 </style>`);
 const bloque = f => readFileSync(new URL('./artifact/' + f, import.meta.url), 'utf8').replace(/\r\n/g, '\n').replace(/__ACC_DEF__/g, ACC);
 
@@ -70,21 +79,15 @@ repRe(/(\n \w+:'<svg[^\n]*')\n\};/, `$1,
 entre('/* ---------- almacenamiento ---------- */', '/* ---------- consultas ---------- */', bloque('almacenamiento.js'), 'almacenamiento');
 s = s.replace(/\bput\('[a-z]_' \+ [\w.]+, [\w.]+\)/g, 'persist()');
 
-// 5. Coach IA en desarrollo
-entre('function datosCoach(){', 'function vAnalisis(){', `// El coach IA está en desarrollo: al intentar usarlo se muestra el aviso "Trabajando".
-function trabajando(){ ui.sheet = { tipo: 'trabajando' }; renderLayer(); }
-function analizar(){
-  if (!ui.coach.obj.length) { ui.coach.run = { error: 'Elige al menos un objetivo.' }; render(); return; }
-  trabajando();
-}
-`, 'funciones del coach (datosCoach → vAnalisis)');
-entre('async function enviarChat(){', '/* ----- hojas (sheets) ----- */', 'function enviarChat(){ trabajando(); }\n\n', 'chat del coach');
+// 5. Coach IA conectado a un modelo de lenguaje (Claude) con la clave del usuario.
+//    Reemplaza todo el coach del artifact desde datosCoach() hasta las hojas (análisis, pantalla del análisis y chat).
+entre('function datosCoach(){', '/* ----- hojas (sheets) ----- */', bloque('coach.js'), 'funciones del coach (datosCoach → hojas)');
 rep(`Coach IA</span><span style="width:44px"></span></div>' +
     '<div class="col" style="gap:8px"><h2 style="font-size:26px">¿Cuál es tu objetivo?</h2>`,
-  `Coach IA</span><span class="tag" style="font-size:11px">En desarrollo</span></div>' +
+  `Coach IA</span><button class="ico" data-ia="abrir" aria-label="Conexión de IA">' + I.gear + '</button></div>' +
     '<div class="col" style="gap:8px"><h2 style="font-size:26px">¿Cuál es tu objetivo?</h2>`, 'cabecera del coach');
-rep(`  } else if (s.tipo === 'confirmar') {`, `  } else if (s.tipo === 'trabajando') {
-    h = '<div class="col" style="align-items:center;text-align:center;gap:12px;padding:8px 0"><span class="acc">' + I.tool + '</span><span class="tag acc">Trabajando</span><span class="disp" style="font-size:22px">El Coach IA está en desarrollo</span><span class="tx2" style="line-height:1.5">Estamos trabajando en esta función. Pronto podrás analizar tus entrenos y hacerle preguntas al coach. Mientras tanto, todo lo que registras queda guardado para cuando esté lista.</span></div><button class="btn" data-a="cerrarSheet">Entendido</button>';
+rep(`  } else if (s.tipo === 'confirmar') {`, `  } else if (s.tipo === 'ia') {
+    h = vSheetIA(s);
   } else if (s.tipo === 'confirmar') {`, 'hoja "confirmar"');
 
 // 6. Ajustes: engranaje en Inicio, ruta, vista y acciones

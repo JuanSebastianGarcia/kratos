@@ -11,6 +11,7 @@ function vAjustes(){
     '<button class="btn" data-a="exportar">' + I.download + 'Exportar datos</button><button class="btn ghost" data-a="importar">' + I.upload + 'Importar datos</button>' +
     '<span class="note">El archivo es un JSON con: ejercicios, rutinas, perfil, sesiones, medidas y analisis. Al importar se reemplaza lo que venga en el archivo.</span></div></div>' +
     vColor() +
+    vIAAjustes() +
     '<div class="col"><span class="sec">Avisos de descanso</span><div class="card"><span class="tx2" style="font-size:14px;line-height:1.45">' + notifTxt + '</span>' + (KN.isNative && !KN.notif.enabled ? '<button class="btn soft" style="color:var(--tx)" data-a="activarAvisos">Activar avisos</button>' : '') + '<span class="note">Durante un entreno la pantalla se mantiene encendida.</span></div></div>' +
     '<p class="note" style="text-align:center;margin:8px 0 0">Kratos' + (appVersion ? ' · versión ' + esc(appVersion) : '') + '</p>';
 }
