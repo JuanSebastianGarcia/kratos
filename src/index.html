@@ -62,6 +62,7 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
 .day .n{font-size:15px;font-weight:600}
 .dot{width:6px;height:6px;border-radius:3px;background:transparent}
 .dot.on{background:var(--acc)}.day.today .dot.on{background:var(--acc-tx)}
+button.day{border:0;padding:0;width:100%}.day:disabled{opacity:.35;cursor:default}.day.now{box-shadow:inset 0 0 0 1.5px var(--acc)}.ico.dnav{width:36px;height:36px}.ico.dnav:disabled{opacity:.3;cursor:default}
 .dtog{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--s1);color:var(--tx2);font-weight:700;font-size:14px}
 .dtog.on{background:var(--acc);color:var(--acc-tx);border-color:var(--acc)}
 .item{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;align-items:center;gap:10px}
@@ -389,6 +390,7 @@ function atras(){
   if (ui.picker) { ui.picker = null; renderLayer(); return; }
   if (ui.sheet) { ui.sheet = null; renderLayer(); return; }
   const v = ui.view;
+  if (v === 'inicio' && ui.dia != null) { ui.dia = null; render(); return; }
   if (v === 'editor') { ui.draft = null; go('rutinas'); return; }
   if (v === 'previa') { const d = ui.previa ? ui.previa.desde : 'rutinas'; ui.previa = null; go(d); return; }
   const padre = { medida: 'medidas', coach: 'stats', analisis: 'coach', ajustes: 'inicio', entreno: 'inicio', rutinas: 'inicio', medidas: 'inicio', stats: 'inicio' }[v];
@@ -465,20 +467,30 @@ function toast(t){ ui.toast = t; renderLayer(); clearTimeout(toastT); toastT = s
 function go(v){ ui.view = v; render(); window.scrollTo(0, 0); }
 
 /* ----- Inicio ----- */
+// ui.dia = medianoche (ms) del día pasado que se está viendo en Inicio; null/undefined = hoy. No se guarda.
 function vInicio(){
   const now = new Date();
-  const ws = weekStart(now).getTime();
-  const semana = sesionesEn(ws);
-  const td = dow(now);
+  const hoy0 = new Date(now); hoy0.setHours(0,0,0,0);
+  if (ui.dia != null && ui.dia >= hoy0.getTime()) ui.dia = null;
+  const sel = ui.dia != null ? new Date(ui.dia) : null;
+  const ref = sel || now;
+  const ws = weekStart(ref).getTime();
+  const semana = sel ? sesionesEn(ws).filter(s => s.inicio < ws + 7*864e5) : sesionesEn(ws);
+  const td = dow(now), sd = dow(ref), mismaSem = weekStart(now).getTime() === ws;
   let days = '';
   for (let i = 0; i < 7; i++) {
     const d = new Date(ws + i*864e5);
     const has = S.sesiones.some(s => s.inicio >= d.getTime() && s.inicio < d.getTime() + 864e5);
-    days += '<div class="day' + (i === td ? ' today' : '') + '"><span class="l">' + DIAS[i] + '</span><span class="n">' + d.getDate() + '</span><span class="dot' + (has ? ' on' : '') + '"></span></div>';
+    const t0 = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(), futuro = t0 > hoy0.getTime();
+    days += '<button class="day' + (i === sd ? ' today' : '') + (sel && mismaSem && i === td ? ' now' : '') + '" data-a="diaSel" data-t="' + t0 + '" aria-label="' + DIAS_LARGO[i] + ' ' + d.getDate() + '"' + (i === sd ? ' aria-pressed="true"' : '') + (futuro ? ' disabled' : '') + '><span class="l">' + DIAS[i] + '</span><span class="n">' + d.getDate() + '</span><span class="dot' + (has ? ' on' : '') + '"></span></button>';
   }
-  const fecha = DIAS_LARGO[td] + ', ' + now.getDate() + ' de ' + ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][now.getMonth()];
+  const fecha = DIAS_LARGO[sd] + ', ' + ref.getDate() + ' de ' + ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][ref.getMonth()] + (ref.getFullYear() !== now.getFullYear() ? ' de ' + ref.getFullYear() : '');
+  const titulo = sel ? relDay(sel).replace(/^./, c => c.toUpperCase()) : 'Hoy';
+  const semTxt = mismaSem ? 'Esta semana' : 'Semana del ' + dstr(ws);
   let hoy = '';
-  if (S.activo) {
+  if (sel) {
+    hoy = vDiaPasado(sel);
+  } else if (S.activo) {
     hoy = '<div class="card hi"><span class="sec acc">Entreno en curso</span><span class="disp" style="font-size:22px">' + esc(S.activo.nombre) + '</span><button class="btn" data-a="go" data-v="entreno">' + I.play + 'Continuar</button></div>';
   } else {
     const deHoy = S.rutinas.filter(r => (r.dias || []).includes(td));
@@ -496,11 +508,37 @@ function vInicio(){
   const plan = new Set(); S.rutinas.forEach(r => (r.dias || []).forEach(d => plan.add(d)));
   const vol = semana.reduce((t, s) => t + volSesion(s), 0);
   const ult = S.sesiones[0];
-  return '<div class="row between" style="align-items:flex-start"><div class="col" style="gap:4px"><span class="mut" style="font-size:13px">' + fecha + '</span><h1>Hoy</h1></div><button class="ico box" data-a="go" data-v="ajustes" aria-label="Ajustes">' + I.gear + '</button></div>' +
+  const ajustes = '<button class="ico box" data-a="go" data-v="ajustes" aria-label="Ajustes">' + I.gear + '</button>';
+  return '<div class="row between" style="align-items:flex-start"><div class="col" style="gap:4px"><span class="mut" style="font-size:13px">' + fecha + '</span><h1>' + titulo + '</h1></div>' + (sel ? '<div class="row" style="gap:8px"><button class="pill out" data-a="diaHoy" aria-label="Volver a hoy">Hoy</button>' + ajustes + '</div>' : ajustes) + '</div>' +
     (ui.saveNote ? '<p class="note" style="margin:0">' + esc(ui.saveNote) + '</p>' : '') +
-    '<div class="col"><span class="sec">Esta semana</span><div class="grid7">' + days + '</div></div>' + hoy +
+    '<div class="col"><div class="row between"><span class="sec">' + semTxt + '</span><div class="row" style="gap:2px"><button class="ico dnav" data-a="diaNav" data-d="-1" aria-label="Día anterior">' + I.back + '</button><button class="ico dnav" data-a="diaNav" data-d="1" aria-label="Día siguiente"' + (sel ? '' : ' disabled') + '>' + I.next + '</button></div></div><div class="grid7">' + days + '</div></div>' + hoy +
     '<div class="grid3"><div class="stat"><span class="mut" style="font-size:12px">Entrenos</span><b>' + semana.length + (plan.size ? '<small>/' + plan.size + '</small>' : '') + '</b></div><div class="stat"><span class="mut" style="font-size:12px">Volumen</span><b>' + fmt(vol/1000, 1) + '<small> t</small></b></div><div class="stat"><span class="mut" style="font-size:12px">Racha</span><b>' + racha() + '<small> sem</small></b></div></div>' +
-    (ult ? '<div class="col"><span class="sec">Último entreno</span><div class="item"><div class="col" style="gap:3px;flex:1"><span style="font-weight:600">' + esc(ult.nombre) + '</span><span class="mut" style="font-size:13px">' + relDay(ult.inicio) + ', ' + Math.round((ult.fin - ult.inicio)/60000) + ' min, ' + fmt(volSesion(ult), 0) + ' kg movidos</span></div></div></div>' : '');
+    (ult && !sel ? '<div class="col"><span class="sec">Último entreno</span><div class="item"><div class="col" style="gap:3px;flex:1"><span style="font-weight:600">' + esc(ult.nombre) + '</span><span class="mut" style="font-size:13px">' + relDay(ult.inicio) + ', ' + Math.round((ult.fin - ult.inicio)/60000) + ' min, ' + fmt(volSesion(ult), 0) + ' kg movidos</span></div></div></div>' : '');
+}
+// Día pasado en Inicio: resumen de cada entreno de ese día (o aviso si no hubo).
+function vDiaPasado(d){
+  const t = d.getTime(), sig = new Date(d); sig.setDate(sig.getDate() + 1);
+  const ses = S.sesiones.filter(s => s.inicio >= t && s.inicio < sig.getTime()).sort((a, b) => a.inicio - b.inicio);
+  if (!ses.length) {
+    const prog = S.rutinas.filter(r => (r.dias || []).includes(dow(d)));
+    return '<div class="card"><span class="sec">' + DIAS_LARGO[dow(d)] + '</span><span class="disp" style="font-size:22px">Sin entreno ese día</span><span class="note">' + (prog.length ? 'Tenías programada: ' + esc(prog.map(r => r.nombre).join(', ')) + '.' : 'No tenías rutinas programadas ese día.') + '</span></div>';
+  }
+  return ses.map(s => {
+    const min = Math.max(0, Math.round((s.fin - s.inicio)/60000));
+    const hora = new Date(s.inicio).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
+    const stat = (l, v, u) => '<div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">' + l + '</span><b>' + v + '<small> ' + u + '</small></b></div>';
+    const ejs = s.ejercicios.map(e => {
+      const u = e.unidad === 'lb' ? 'lb' : 'kg';
+      const st = x => fmt(deKg(x.kg || 0, u)) + ' ' + u + ' × ' + (x.reps || 0);
+      const best = e.series.reduce((b, x) => !b || (x.kg || 0) > (b.kg || 0) || ((x.kg || 0) === (b.kg || 0) && (x.reps || 0) > (b.reps || 0)) ? x : b, null);
+      const n = e.series.length;
+      return '<div class="item"><div class="col" style="gap:3px;flex:1;min-width:0"><span style="font-weight:600">' + esc(e.nombre || ejName(e.ejId)) + '</span><span class="mut" style="font-size:13px">' + n + (n === 1 ? ' serie' : ' series') + (e.uni ? ', unilateral' : '') + ': ' + e.series.map(x => fmt(deKg(x.kg || 0, u)) + '×' + (x.reps || 0)).join(' · ') + '</span></div>' +
+        (best ? '<div class="col" style="gap:2px;align-items:flex-end;flex-shrink:0"><span class="mut" style="font-size:11px">Mejor serie</span><span class="disp" style="font-size:15px">' + st(best) + '</span></div>' : '') + '</div>';
+    }).join('');
+    return '<div class="card"><div class="row between" style="align-items:flex-start"><div class="col" style="gap:6px"><span class="sec acc">Entreno de las ' + esc(hora) + '</span><span class="disp" style="font-size:24px">' + esc(s.nombre) + '</span></div><span class="tag">' + s.ejercicios.length + (s.ejercicios.length === 1 ? ' ejercicio' : ' ejercicios') + '</span></div>' +
+      '<div class="grid3">' + stat('Duración', min, 'min') + stat('Volumen', fmt(volSesion(s), 0), 'kg') + stat('Series', nSeries(s), '') + '</div>' +
+      '<div class="col" style="gap:8px">' + (ejs || '<span class="note">No se registraron series.</span>') + '</div></div>';
+  }).join('');
 }
 
 /* ----- Rutinas ----- */
@@ -1109,6 +1147,9 @@ const A = {
     saveConfig(); ui.draft = null; toast(isNew ? 'Rutina creada.' : 'Rutina guardada.'); go('rutinas');
   },
   borrarRutina: () => confirmar('¿Borrar rutina?', 'Se borra la rutina, pero tus entrenos ya hechos se mantienen.', 'Borrar', () => { S.rutinas = S.rutinas.filter(r => r.id !== ui.draft.id); saveConfig(); ui.draft = null; go('rutinas'); }),
+  diaSel: el => { ui.dia = +el.dataset.t; render(); },
+  diaNav: el => { const d = new Date(ui.dia != null ? ui.dia : Date.now()); d.setHours(0,0,0,0); d.setDate(d.getDate() + (+el.dataset.d)); ui.dia = d.getTime(); render(); },
+  diaHoy: () => { ui.dia = null; render(); },
   empezar: el => { const r = rutById(el.dataset.id); if (r && r.items.length) abrirPrevia(r, ui.view); },
   cerrarPrevia: () => atras(),
   moverPrevia: el => moverPrevia(+el.dataset.k, +el.dataset.d),
