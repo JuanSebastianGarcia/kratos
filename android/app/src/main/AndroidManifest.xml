@@ -33,6 +33,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Fin del descanso: alarma exacta que hace sonar y vibrar el aviso (RestTimerPlugin) -->
+        <receiver
+            android:name=".RestTimerReceiver"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->

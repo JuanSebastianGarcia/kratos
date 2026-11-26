@@ -1,7 +1,7 @@
 // Puente entre la app (src/index.html) y las funciones nativas de Android vía Capacitor.
 // Se empaqueta con esbuild en www/native.js y expone window.KN.
 // En un navegador normal todo tiene un respaldo web para poder probar la app.
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { KeepAwake } from '@capacitor-community/keep-awake';
@@ -101,6 +101,25 @@ const notif = {
   },
 };
 
+/* ---------- descanso: cuenta regresiva en la notificación + alarma al terminar ---------- */
+// Plugin propio de la app (android/app/src/main/java/com/kratosfit/app/RestTimerPlugin.java).
+// start devuelve true si el plugin se encargó; false (navegador o APK sin el plugin) para usar los avisos normales.
+const RestTimer = registerPlugin('RestTimer');
+const rest = {
+  ok: isNative,
+  // o: { inicio, fin (0 = descanso libre), titulo, texto, color }
+  async start(o) {
+    if (!this.ok) return false;
+    try { await RestTimer.start(o); return true; }
+    catch (e) { if (e && e.code === 'UNIMPLEMENTED') this.ok = false; return false; }
+  },
+  async stop() {
+    if (!this.ok) return;
+    try { await RestTimer.stop(); }
+    catch (e) { if (e && e.code === 'UNIMPLEMENTED') this.ok = false; }
+  },
+};
+
 /* ---------- vibración ---------- */
 async function vibrate() {
   try {
@@ -140,4 +159,4 @@ function onBack(fn) { if (isNative) App.addListener('backButton', fn); }
 function minimize() { if (isNative) App.minimizeApp().catch(() => {}); }
 async function version() { try { if (isNative) { const i = await App.getInfo(); return i.version + ' (' + i.build + ')'; } } catch (e) {} return 'web'; }
 
-window.KN = { isNative, storage, keepAwake, notif, vibrate, exportFile, onPause, onResume, onBack, minimize, version };
+window.KN = { isNative, storage, keepAwake, notif, rest, vibrate, exportFile, onPause, onResume, onBack, minimize, version };
