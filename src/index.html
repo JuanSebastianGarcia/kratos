@@ -241,7 +241,7 @@ function hexHsl(hex){
 }
 
 /* ----- pantalla encendida y aviso de fin de descanso ----- */
-// Se programan 3 avisos seguidos (cada 5 s) para que suene como alarma aunque el celular esté bloqueado.
+// Respaldo sin el plugin RestTimer: 3 avisos seguidos (cada 5 s) para que suene aunque el celular esté bloqueado.
 const REST_IDS = [1001, 1002, 1003];
 let restSig = '';
 function textoSiguiente(a, d){
@@ -261,12 +261,18 @@ function syncEntreno(){
   const sig = d ? d.inicio + ':' + d.objetivo : '';
   if (sig === restSig) return;
   restSig = sig;
-  // descanso libre (objetivo 0): no hay hora de fin, no se programa aviso
-  if (!d || !d.objetivo) { cancelarAvisos(); return; }
-  const at = d.inicio + d.objetivo*1000, txt = textoSiguiente(a, d);
-  REST_IDS.forEach((id, k) => KN.notif.schedule(id, at + k*5000, k ? '¡Se acabó el descanso!' : '¡Descanso terminado!', txt, acento()));
+  if (!d) { cancelarAvisos(); return; }
+  // descanso libre (objetivo 0): no hay hora de fin, solo cronómetro y sin alarma
+  const at = d.objetivo ? d.inicio + d.objetivo*1000 : 0, txt = textoSiguiente(a, d);
+  // Android: notificación con cuenta regresiva y alarma exacta al terminar (plugin RestTimer).
+  // Si no está disponible, se usan los avisos programados de siempre.
+  KN.rest.start({ inicio: d.inicio, fin: at, titulo: 'Descanso', texto: txt, color: acento() }).then(ok => {
+    if (ok || sig !== restSig) return;
+    if (!at) { cancelarAvisos(); return; }
+    REST_IDS.forEach((id, k) => KN.notif.schedule(id, at + k*5000, k ? '¡Se acabó el descanso!' : '¡Descanso terminado!', txt, acento()));
+  });
 }
-function cancelarAvisos(){ REST_IDS.forEach(id => KN.notif.cancel(id)); }
+function cancelarAvisos(){ KN.rest.stop(); REST_IDS.forEach(id => KN.notif.cancel(id)); }
 
 function applyLoaded(o){
   if (!o) return;

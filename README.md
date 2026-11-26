@@ -24,8 +24,12 @@ En el celular: abre el enlace, descarga `Kratos.apk` y ábrelo. La primera vez A
 
 - `src/index.html` — toda la app (pantallas, lógica, estilos).
 - `src/native.js` — puente con Android: guardado (Capacitor Preferences), pantalla encendida durante el
-  entreno (KeepAwake), aviso de fin de descanso con sonido y vibración (Local Notifications),
-  exportar (Filesystem + Share) y botón atrás.
+  entreno (KeepAwake), exportar (Filesystem + Share) y botón atrás.
+- `android/app/src/main/java/com/kratosfit/app/RestTimerPlugin.java` y `RestTimerReceiver.java` — plugin
+  propio `RestTimer`: durante el descanso muestra una notificación con la cuenta regresiva (se ve en la
+  barra y con la pantalla bloqueada) y programa una alarma exacta que, al terminar, suena (volumen de
+  alarma) y vibra aunque la app esté en segundo plano o la pantalla apagada. Si la app está abierta,
+  suena la alarma de la propia app. Si el plugin no está, se usan avisos de Local Notifications.
 - `scripts/build.mjs` — empaqueta todo en `www/` (incluye las fuentes, funciona sin internet).
 - `scripts/icons.mjs` — genera el ícono y la pantalla de inicio desde `resources/logo-kratos.png`.
 - `scripts/adaptar.mjs` — convierte una versión nueva del artifact de Claude.ai en `src/index.html`.
