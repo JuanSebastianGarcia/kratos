@@ -901,6 +901,71 @@ function serieGuardada(ex, s){
   return o;
 }
 function descartarActivo(){ alarmaOff(); S.activo = null; saveActivo(); }
+/* ----- Comparación con el entreno anterior de la misma rutina (función pura) -----
+   Por ejercicio (por ejId): mejor kg, reps con ese kg, volumen (kg×reps) y 1RM estimado (Epley).
+   estado: 'mejor' | 'peor' | 'igual' (decide el kg; si empata, las reps con ese kg; si empata, el volumen). */
+const rm1 = (kg, reps) => kg > 0 && reps > 0 ? (reps === 1 ? kg : kg * (1 + reps / 30)) : 0;
+function resumenEj(series){
+  const cel = series.reduce((t, x) => t.concat(celdasG(x)), []).filter(c => c && (c.kg || c.reps));
+  const top = cel.reduce((b, c) => !b || c.kg > b.kg || (c.kg === b.kg && c.reps > b.reps) ? c : b, null) || { kg: 0, reps: 0 };
+  return { kg: top.kg || 0, reps: top.reps || 0, vol: series.reduce((t, x) => t + volSerie(x), 0), rm: cel.reduce((m, c) => Math.max(m, rm1(c.kg || 0, c.reps || 0)), 0), series: series.length };
+}
+function compararSesion(nueva, anterior){
+  if (!nueva || !anterior) return null;
+  const agrupar = s => { const m = new Map(); s.ejercicios.forEach(e => { if (!m.has(e.ejId)) m.set(e.ejId, { ejId: e.ejId, nombre: e.nombre, unidad: e.unidad, series: [] }); m.get(e.ejId).series.push(...e.series); }); return m; };
+  const N = agrupar(nueva), A = agrupar(anterior), EPS = 0.01;
+  const sgn = d => d > EPS ? 1 : d < -EPS ? -1 : 0;
+  const pct = (a, b) => b > 0 ? (a - b) / b * 100 : null;
+  const ejercicios = [], nuevos = [], faltan = [];
+  N.forEach((n, id) => {
+    const o = A.get(id);
+    if (!o) { nuevos.push({ ejId: id, nombre: n.nombre }); return; }
+    const a = resumenEj(n.series), b = resumenEj(o.series);
+    const s = sgn(a.kg - b.kg) || Math.sign(a.reps - b.reps) || sgn(a.vol - b.vol);
+    ejercicios.push({ ejId: id, nombre: n.nombre, unidad: n.unidad, ahora: a, antes: b,
+      dKg: a.kg - b.kg, dReps: a.reps - b.reps, dVol: a.vol - b.vol, volPct: pct(a.vol, b.vol), dRm: a.rm - b.rm, rmPct: pct(a.rm, b.rm),
+      estado: s > 0 ? 'mejor' : s < 0 ? 'peor' : 'igual' });
+  });
+  A.forEach((o, id) => { if (!N.has(id)) faltan.push({ ejId: id, nombre: o.nombre }); });
+  const vol = volSesion(nueva), volAnt = volSesion(anterior);
+  const durMin = s => s.fin && s.inicio ? Math.round((s.fin - s.inicio) / 60000) : null;
+  const dN = durMin(nueva), dA = durMin(anterior);
+  return { fechaAnt: anterior.inicio, ejercicios, nuevos, faltan,
+    vol, volAnt, dVol: vol - volAnt, volPct: pct(vol, volAnt),
+    mejor: ejercicios.filter(e => e.estado === 'mejor').length, peor: ejercicios.filter(e => e.estado === 'peor').length, igual: ejercicios.filter(e => e.estado === 'igual').length,
+    dur: dN, durAnt: dA, dDur: dN != null && dA != null ? dN - dA : null };
+}
+// HTML de la comparación para la hoja de resumen. c = compararSesion(...)
+function vComparativa(c){
+  const col = d => d > 0.005 ? 'var(--ok)' : d < -0.005 ? 'var(--bad)' : 'var(--mut)';
+  const sig = d => d > 0.005 ? '+' : '';
+  const flecha = d => d > 0.005 ? '▲' : d < -0.005 ? '▼' : '=';
+  const delta = (d, txt) => '<span style="color:' + col(d) + ';font-weight:600;white-space:nowrap">' + flecha(d) + ' ' + txt + '</span>';
+  const pctTxt = p => p == null ? '—' : sig(p) + fmt(p, 0) + '%';
+  const uTxt = u => u === 'lb' ? 'lb' : 'kg';
+  const kgU = (v, u) => r1(deKg(v, u)) + ' ' + uTxt(u);
+  const ind = { mejor: ['var(--ok)', '▲', 'Mejor'], peor: ['var(--bad)', '▼', 'Bajó'], igual: ['var(--mut)', '=', 'Igual'] };
+  let h = '<span class="sec" style="margin-top:4px">Comparado con el ' + esc(dstr(c.fechaAnt)) + ' (' + esc(relDay(c.fechaAnt)) + ')</span>' +
+    '<div class="grid3">' +
+      '<div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Volumen</span><b style="color:' + col(c.volPct || 0) + '">' + (c.volPct == null ? '—' : flecha(c.volPct) + ' ' + pctTxt(c.volPct)) + '</b></div>' +
+      '<div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Ejercicios</span><b><span style="color:var(--ok)">' + c.mejor + '▲</span> <span style="color:var(--bad)">' + c.peor + '▼</span></b>' + (c.igual ? '<span class="mut" style="font-size:12px">' + c.igual + ' igual' + (c.igual > 1 ? 'es' : '') + '</span>' : '') + '</div>' +
+      '<div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Duración</span><b>' + (c.dDur == null ? '—' : (c.dDur > 0 ? '+' : '') + c.dDur + '<small> min</small>') + '</b></div>' +
+    '</div>';
+  h += c.ejercicios.map(e => {
+    const u = e.unidad, [cl, fl, tx] = ind[e.estado];
+    return '<div class="stat" style="background:var(--s2);gap:8px"><div class="row between"><span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.nombre || ejName(e.ejId)) + '</span><span class="tag" style="color:' + cl + '">' + fl + ' ' + tx + '</span></div>' +
+      '<div class="row between" style="align-items:baseline;flex-wrap:wrap"><span class="disp" style="font-size:20px">' + kgU(e.ahora.kg, u) + ' × ' + e.ahora.reps + '</span><span class="mut" style="font-size:12px">antes ' + kgU(e.antes.kg, u) + ' × ' + e.antes.reps + '</span></div>' +
+      '<div class="row" style="flex-wrap:wrap;gap:6px 14px;font-size:12px">' +
+        '<span class="mut">Peso ' + delta(e.dKg, sig(e.dKg) + kgU(e.dKg, u)) + '</span>' +
+        (Math.abs(e.dKg) <= 0.01 ? '<span class="mut">Reps ' + delta(e.dReps, sig(e.dReps) + e.dReps) + '</span>' : '') +
+        '<span class="mut">Volumen ' + delta(e.dVol, e.volPct == null ? sig(e.dVol) + fmt(e.dVol, 0) + ' kg' : pctTxt(e.volPct)) + '</span>' +
+        '<span class="mut">1RM est. ' + delta(e.dRm, sig(e.dRm) + kgU(e.dRm, u)) + '</span>' +
+      '</div></div>';
+  }).join('');
+  if (c.nuevos.length) h += '<span class="note" style="margin:0">Nuevo' + (c.nuevos.length > 1 ? 's' : '') + ' esta vez: ' + c.nuevos.map(e => esc(e.nombre || ejName(e.ejId))).join(', ') + '.</span>';
+  if (c.faltan.length) h += '<span class="note" style="margin:0">No hiciste esta vez: ' + c.faltan.map(e => esc(e.nombre || ejName(e.ejId))).join(', ') + '.</span>';
+  return h;
+}
 function guardarSesion(){
   const a = S.activo; if (!a) return;
   if (a.descanso) { const s = a.ejercicios[a.descanso.ex].series[a.descanso.set]; if (s && s.descanso == null) s.descanso = Math.round((Date.now() - a.descanso.inicio)/1000); }
@@ -909,8 +974,9 @@ function guardarSesion(){
   alarmaOff();
   S.activo = null; saveActivo();
   if (!ses.ejercicios.length) { ui.sheet = null; toast('No había series hechas. El entreno no se guardó.'); go('inicio'); return; }
+  const ant = ses.rutinaId ? S.sesiones.find(x => x.rutinaId === ses.rutinaId) : null; // la anterior de esta rutina (más reciente primero)
   S.sesiones.unshift(ses); persist();
-  ui.sheet = { tipo: 'resumen', ses: ses };
+  ui.sheet = { tipo: 'resumen', ses: ses, comp: compararSesion(ses, ant), conRutina: !!ses.rutinaId };
   go('inicio');
 }
 
@@ -1110,7 +1176,7 @@ function vSheet(){
   } else if (s.tipo === 'resumen') {
     const x = s.ses, dur = Math.round((x.fin - x.inicio)/60000);
     const prsN = x.ejercicios.filter(e => { const best = Math.max(...e.series.map(z => z.kg)); return !S.sesiones.some(o => o.id !== x.id && o.ejercicios.some(oe => oe.ejId === e.ejId && oe.series.some(z => z.kg >= best))) && best > 0; }).length;
-    h = '<span class="sec acc">Entreno guardado</span><span class="disp" style="font-size:24px">' + esc(x.nombre) + '</span><div class="grid3"><div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Duración</span><b>' + dur + '<small> min</small></b></div><div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Series</span><b>' + nSeries(x) + '</b></div><div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Volumen</span><b>' + fmt(volSesion(x)/1000, 2) + '<small> t</small></b></div></div>' + (prsN ? '<span class="acc" style="font-weight:600">Nuevo récord de peso en ' + prsN + ' ejercicio' + (prsN > 1 ? 's' : '') + '.</span>' : '') + '<button class="btn" data-a="cerrarSheet">Listo</button>';
+    h = '<span class="sec acc">Entreno guardado</span><span class="disp" style="font-size:24px">' + esc(x.nombre) + '</span><div class="grid3"><div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Duración</span><b>' + dur + '<small> min</small></b></div><div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Series</span><b>' + nSeries(x) + '</b></div><div class="stat" style="background:var(--s2)"><span class="mut" style="font-size:12px">Volumen</span><b>' + fmt(volSesion(x)/1000, 2) + '<small> t</small></b></div></div>' + (prsN ? '<span class="acc" style="font-weight:600">Nuevo récord de peso en ' + prsN + ' ejercicio' + (prsN > 1 ? 's' : '') + '.</span>' : '') + (s.comp ? vComparativa(s.comp) : s.conRutina ? '<span class="note" style="margin:0">Primera vez con esta rutina. La próxima vez verás aquí cómo progresaste.</span>' : '') + '<button class="btn" data-a="cerrarSheet">Listo</button>';
   } else if (s.tipo === 'biserie') {
     const a = S.activo, cand = candidatosBiserie(a);
     h = '<div class="row between"><span class="disp" style="font-size:22px">Hacer biserie</span><button class="ico" data-a="cerrarSheet" aria-label="Cerrar">' + I.x + '</button></div><span class="tx2" style="font-size:14px;line-height:1.45">Elige el ejercicio que vas a alternar con <b>' + esc(ejName(a.ejercicios[a.idx].ejId)) + '</b>. Se hacen seguidos y descansas al terminar los dos.</span>' +
